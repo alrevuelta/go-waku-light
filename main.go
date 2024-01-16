@@ -14,14 +14,25 @@ import (
 	"os"
 	"time"
 
+	"github.com/libp2p/go-libp2p/core/peer"
+	libp2pprot "github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/multiformats/go-multiaddr"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"github.com/waku-org/go-zerokit-rln/rln"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/waku-org/go-waku/waku/v2/node"
+	"github.com/waku-org/go-waku/waku/v2/peerstore"
+	"github.com/waku-org/go-waku/waku/v2/protocol"
+	"github.com/waku-org/go-waku/waku/v2/protocol/lightpush"
+	"github.com/waku-org/go-waku/waku/v2/protocol/pb"
+	"github.com/waku-org/go-waku/waku/v2/utils"
 )
 
 // some public endopoints
@@ -97,6 +108,13 @@ func main() {
 				Name: "register",
 				Action: func(cCtx *cli.Context) error {
 					Register(cfg, privKey, amountRegister)
+					return nil
+				},
+			},
+			{
+				Name: "send-message",
+				Action: func(cCtx *cli.Context) error {
+					SendMessage()
 					return nil
 				},
 			},
@@ -485,4 +503,89 @@ func SyncTree(cfg *Config, chunkSize uint64) *rln.RLN {
 	log.Info("Local root:", rln.Bytes32ToBigInt(myRoot))
 
 	return rlnInstance
+}
+
+func SendMessage() {
+
+	wakuNode, err := node.New(node.WithLightPush(), node.WithClusterID(1))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if err := wakuNode.Start(context.Background()); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	ct, err := protocol.NewContentTopic("basic2", "1", "test", "proto")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//proof := &rlnpb.RateLimitProof{
+	//	Epoch: rln.CalcEpoch(rlnRelay.timesource.Now()),
+	//}
+
+	rlnInstance, err := rln.NewRLN()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	m, err := rlnInstance.MembershipKeyGen()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	proof, err := rlnInstance.GenerateProof([]byte(Message), *m, rln.MembershipIndex(0), rln.Epoch{RlnEpoch})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	b, err := proto.Marshal(proof)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	msg := &pb.WakuMessage{
+		Payload: []byte("Hello World"),
+		//Version:      &uint32(0),
+		ContentTopic:   ct.String(),
+		Timestamp:      utils.GetUnixEpoch(),
+		RateLimitProof: b,
+	}
+
+	//msgId, err := wakuNode.Lightpush().Publish(context.Background(), msg, lightpush.WithPeer("12D3KooWQhQ"))
+	peerAddr, err := multiaddr.NewMultiaddr("/dns4/node-01.do-ams3.waku.test.statusim.net/tcp/30303/p2p/16Uiu2HAkykgaECHswi3YKJ5dMLbq2kPVCo89fcyTd38UcQD6ej5W")
+	if err != nil {
+		panic(err)
+	}
+
+	// TODO not sure if this is valid. must provide gossipsub topci and protocol??
+	_, err = wakuNode.AddPeer(peerAddr, peerstore.Static, []string{"/waku/2/rs/1/0"}, []libp2pprot.ID{lightpush.LightPushID_v20beta1}...)
+	if err != nil {
+		panic(err)
+	}
+	peerId, err := peer.AddrInfoFromP2pAddr(peerAddr)
+	if err != nil {
+		panic(err)
+	}
+	msgId, err := wakuNode.Lightpush().Publish(context.Background(), msg, lightpush.WithPeer(peerId.ID), lightpush.WithPubSubTopic("/waku/2/rs/1/0"))
+	if err != nil {
+		log.Error("Error sending a message: ", err)
+	}
+	_ = msgId
+	/*
+		msg := &pb.WakuMessage{
+			Payload:      []byte("Hello World"),
+			Version:      0,
+			ContentTopic: protocol.NewContentTopic("basic2", 1, "test", "proto").String(),
+			Timestamp:    utils.GetUnixEpoch(),
+		}
+
+		msgId, err = wakuNode.Lightpush().Publish(context.Background(), msg)
+		if err != nil {
+			log.Error("Error sending a message: ", err)
+		}*/
+
 }
