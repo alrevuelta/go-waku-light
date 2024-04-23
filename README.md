@@ -55,6 +55,17 @@ Any RLN proof can be verified against the smart contract Merkle root.
 ./main verify-rln-proof --proof-file=proof_xxx.json
 ```
 
+You can also create a valid RLN message using onchain Merkle proofs and send it via lightpush to a node using the following. Note that this uses a custom *ad hoc* test network. Start by running a couple of nodes and connect them to each other.
+
+```
+docker run -p 60000:60000 harbor.status.im/wakuorg/nwaku:v0.27.0 --pubsub-topic=/waku/2/rs/100/0 --relay=true --lightpush=true --rln-relay-dynamic=true --rln-relay=true  --cluster-id=100 --rln-relay-eth-client-address=https://rpc.cardona.zkevm-rpc.com --rln-relay-eth-contract-address=0x16abffcab50e8d1ff5c22b118be5c56f801dce54 --nodekey=fa900509b7da6211dc91715260dba7431457d51cc1bb0732a58eb84ec812de99 --log-level=DEBUG
+docker run -p 60001:60001 --network host harbor.status.im/wakuorg/nwaku:v0.27.0 --pubsub-topic=/waku/2/rs/100/0 --relay=true --lightpush=true --cluster-id=100 --rln-relay-eth-client-address=https://rpc.cardona.zkevm-rpc.com --rln-relay-eth-contract-address=0x16abffcab50e8d1ff5c22b118be5c56f801dce54 --log-level=DEBUG --staticnode=/ip4/127.0.0.1/tcp/60000/p2p/16Uiu2HAkxTGJRgkCxgMDH4A4QBvw3q462BRkVJaPF5KQWkc1t4cp --ports-shift=1
+```
+
+Now using your membership, introduce a message and it will be sent via lightpush using the first node. You should see that both nodes verify the RLN proof ok and relay the message to each other.
+```
+./main send-message --membership-file=membership_xxx.json --message="light client sending a rln message"
+```
 
 ## Advanced
 

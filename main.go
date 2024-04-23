@@ -14,23 +14,31 @@ import (
 	"os"
 	"time"
 
+	"github.com/libp2p/go-libp2p/core/peer"
+	libp2pprot "github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/multiformats/go-multiaddr"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"github.com/waku-org/go-zerokit-rln/rln"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/pkg/errors"
+
+	"github.com/waku-org/go-waku/waku/v2/node"
+	"github.com/waku-org/go-waku/waku/v2/peerstore"
+	"github.com/waku-org/go-waku/waku/v2/protocol"
+	"github.com/waku-org/go-waku/waku/v2/protocol/lightpush"
+	"github.com/waku-org/go-waku/waku/v2/protocol/pb"
+	rlnpb "github.com/waku-org/go-waku/waku/v2/protocol/rln/pb"
+	"github.com/waku-org/go-waku/waku/v2/utils"
 )
 
 const Endpoint = "wss://ws.cardona.zkevm-rpc.com"
 const RlnContractAddress = "0x16abffcab50e8d1ff5c22b118be5c56f801dce54"
-
-// Example data for RLN messages
-const Message = "Hello World!"
-const RlnEpoch = 1
 
 type Config struct {
 	client   *ethclient.Client
@@ -45,6 +53,7 @@ func main() {
 	var amountRegister int
 	var privKey string
 	var leafIndex uint64
+	var message string
 
 	executionClient, err := ethclient.Dial(Endpoint)
 	if err != nil {
@@ -77,6 +86,9 @@ func main() {
 	// ./main onchain-generate-rln-proof --membership-file=membership_xxx.json
 	// ./main local-generate-rln-proof --membership-file=membership_xxx.json --chunk-size=500
 	// ./main verify-rln-proof --proof-file=proof_xxx.json
+
+	// Publish message via lightpush
+	// ./main send-message --membership-file=membership_xxx.json --message="light client sending a rln message"
 	app := &cli.App{
 		Commands: []*cli.Command{
 			{
@@ -165,10 +177,15 @@ func main() {
 						Name:        "membership-file",
 						Destination: &membershipFile,
 					},
+					&cli.StringFlag{
+						Name:        "message",
+						Destination: &message,
+						DefaultText: "Hello World!",
+					},
 				},
 				Name: "onchain-generate-rln-proof",
 				Action: func(cCtx *cli.Context) error {
-					err := OnchainGenerateRlnProof(cfg, membershipFile)
+					_, err := OnchainGenerateRlnProof(cfg, membershipFile, message)
 					return err
 				},
 			},
@@ -183,10 +200,15 @@ func main() {
 						Name:        "membership-file",
 						Destination: &membershipFile,
 					},
+					&cli.StringFlag{
+						Name:        "message",
+						Destination: &message,
+						DefaultText: "Hello World!",
+					},
 				},
 				Name: "local-generate-rln-proof",
 				Action: func(cCtx *cli.Context) error {
-					err := LocalGenerateRlnProof(cfg, chunkSize, membershipFile)
+					err := LocalGenerateRlnProof(cfg, chunkSize, membershipFile, message)
 					return err
 				},
 			},
@@ -196,10 +218,33 @@ func main() {
 						Name:        "proof-file",
 						Destination: &proofFile,
 					},
+					&cli.StringFlag{
+						Name:        "message",
+						Destination: &message,
+						DefaultText: "Hello World!",
+					},
 				},
 				Name: "verify-rln-proof",
 				Action: func(cCtx *cli.Context) error {
-					err := VerifyRlnProof(cfg, proofFile)
+					err := VerifyRlnProof(cfg, proofFile, message)
+					return err
+				},
+			},
+
+			{
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "membership-file",
+						Destination: &membershipFile,
+					},
+					&cli.StringFlag{
+						Name:        "message",
+						Destination: &message,
+					},
+				},
+				Name: "send-message",
+				Action: func(cCtx *cli.Context) error {
+					err := SendMessage(cfg, membershipFile, message)
 					return err
 				},
 			},
@@ -426,7 +471,7 @@ func LocalMerkleProof(cfg *Config, chunkSize uint64, leafIndex uint64) error {
 // Generates an rln zk proof to be attached to a message, proving membership
 // inclusion + respecting rate limits. It requires a valid rln membership that
 // has been registered in the contract.
-func LocalGenerateRlnProof(cfg *Config, chunkSize uint64, rlnFile string) error {
+func LocalGenerateRlnProof(cfg *Config, chunkSize uint64, rlnFile string, message string) error {
 	idCred := &rln.IdentityCredential{}
 	jsonFile, err := os.Open(rlnFile)
 	if err != nil {
@@ -454,7 +499,7 @@ func LocalGenerateRlnProof(cfg *Config, chunkSize uint64, rlnFile string) error 
 		return errors.Wrap(err, "error when finding membership in tree")
 	}
 
-	proof, err := rlnInstance.GenerateProof([]byte(Message), *idCred, rln.MembershipIndex(membershipIndex), rln.Epoch{RlnEpoch})
+	proof, err := rlnInstance.GenerateProof([]byte(message), *idCred, rln.MembershipIndex(membershipIndex), rln.GetCurrentEpoch())
 	if err != nil {
 		return errors.Wrap(err, "error when generating proof")
 	}
@@ -478,63 +523,63 @@ func LocalGenerateRlnProof(cfg *Config, chunkSize uint64, rlnFile string) error 
 	return nil
 }
 
-func OnchainGenerateRlnProof(cfg *Config, rlnFile string) error {
+func OnchainGenerateRlnProof(cfg *Config, membershipFile string, message string) (*rln.RateLimitProof, error) {
 	idCred := &rln.IdentityCredential{}
-	jsonFile, err := os.Open(rlnFile)
+	jsonFile, err := os.Open(membershipFile)
 	if err != nil {
-		return errors.Wrap(err, "error when opening file")
+		return nil, errors.Wrap(err, "error when opening file")
 	}
 
 	bb, err := io.ReadAll(jsonFile)
 	if err != nil {
-		return errors.Wrap(err, "error when reading file")
+		return nil, errors.Wrap(err, "error when reading file")
 	}
 	err = json.Unmarshal(bb, &idCred)
 	if err != nil {
-		return errors.Wrap(err, "error when unmarshalling file")
+		return nil, errors.Wrap(err, "error when unmarshalling file")
 	}
 
 	rlnInstance, err := rln.NewRLN()
 	if err != nil {
-		return errors.Wrap(err, "error when creating RLN instance")
+		return nil, errors.Wrap(err, "error when creating RLN instance")
 	}
 
 	callOpts := &bind.CallOpts{Context: context.Background(), Pending: false}
 
 	exists, err := cfg.contract.MemberExists(callOpts, rln.Bytes32ToBigInt(idCred.IDCommitment))
 	if err != nil {
-		return errors.Wrap(err, "error when checking if membership exists")
+		return nil, errors.Wrap(err, "error when checking if membership exists")
 	}
 
 	if !exists {
-		return errors.New("membership does not exist in the contract")
+		return nil, errors.New("membership does not exist in the contract")
 	}
 
 	membershipIndex, err := cfg.contract.Members(callOpts, rln.Bytes32ToBigInt(idCred.IDCommitment))
 	if err != nil {
-		return errors.Wrap(err, "error when fetching membership index")
+		return nil, errors.Wrap(err, "error when fetching membership index")
 	}
 	log.Info("Membership index found in the contract: ", membershipIndex, " for the provided commitment")
 
 	merkleProof, err := OnchainMerkleProof(cfg, membershipIndex.Uint64())
 	if err != nil {
-		return errors.Wrap(err, "error when fetching merkle proof")
+		return nil, errors.Wrap(err, "error when fetching merkle proof")
 	}
 
 	rlnWitness := rln.CreateWitness(
 		idCred.IDSecretHash,
-		[]byte(Message),
-		rln.ToEpoch(RlnEpoch),
+		[]byte(message),
+		rln.GetCurrentEpoch(),
 		*merkleProof)
 
 	proof, err := rlnInstance.GenerateRLNProofWithWitness(rlnWitness)
 	if err != nil {
-		return errors.Wrap(err, "error when generating proof")
+		return nil, errors.Wrap(err, "error when generating proof")
 	}
 
 	proofJson, err := json.Marshal(proof)
 	if err != nil {
-		return errors.Wrap(err, "error when marshalling proof")
+		return nil, errors.Wrap(err, "error when marshalling proof")
 	}
 
 	// Just a hash of the proof, used as filename
@@ -543,15 +588,15 @@ func OnchainGenerateRlnProof(cfg *Config, rlnFile string) error {
 	fileName := fmt.Sprintf("proof_%s.json", hex.EncodeToString(hash[:]))
 	err = ioutil.WriteFile(fileName, proofJson, 0644)
 	if err != nil {
-		return errors.Wrap(err, "error when writing to file")
+		return nil, errors.Wrap(err, "error when writing to file")
 	}
 
 	log.Info("Proof generated succesfully and stored as ", fileName)
 
-	return nil
+	return proof, nil
 }
 
-func VerifyRlnProof(cfg *Config, proofFile string) error {
+func VerifyRlnProof(cfg *Config, proofFile string, message string) error {
 	proof := &rln.RateLimitProof{}
 	jsonFile, err := os.Open(proofFile)
 	if err != nil {
@@ -580,7 +625,7 @@ func VerifyRlnProof(cfg *Config, proofFile string) error {
 		return errors.Wrap(err, "error when creating RLN instance")
 	}
 
-	verified, err := rlnInstance.Verify([]byte(Message), *proof, rln.BigIntToBytes32(onchainRoot))
+	verified, err := rlnInstance.Verify([]byte(message), *proof, rln.BigIntToBytes32(onchainRoot))
 	if err != nil {
 		return errors.Wrap(err, "error when verifying proof")
 	}
@@ -689,4 +734,110 @@ func reverseBytes(b []byte) []byte {
 	}
 
 	return reversed
+}
+
+// See: https://github.com/waku-org/go-waku/blob/master/examples/basic-light-client/main.go
+// Note that this requires a running waku node with lightpush enabled at localhost.
+func SendMessage(cfg *Config, membershipFile string, message string) error {
+	clusterId := uint16(100)
+	peerMulti := "/ip4/127.0.0.1/tcp/60000/p2p/16Uiu2HAkxTGJRgkCxgMDH4A4QBvw3q462BRkVJaPF5KQWkc1t4cp"
+	pubsubTopic := "/waku/2/rs/100/0"
+
+	wakuNode, err := node.New(node.WithLightPush(), node.WithClusterID(clusterId))
+	if err != nil {
+		return errors.Wrap(err, "error when creating waku node")
+	}
+
+	if err := wakuNode.Start(context.Background()); err != nil {
+		return errors.Wrap(err, "error when starting waku node")
+	}
+
+	ct, err := protocol.NewContentTopic("basic2", "1", "test", "proto")
+	if err != nil {
+		return errors.Wrap(err, "error when creating content topic")
+	}
+
+	rlnProof, err := OnchainGenerateRlnProof(cfg, membershipFile, message)
+	if err != nil {
+		return errors.Wrap(err, "error when generating rln proof")
+	}
+
+	serializedRlnProof, err := serializeRLNProof(rlnProof)
+	if err != nil {
+		return errors.Wrap(err, "error when serializing rln proof")
+	}
+
+	msg := &pb.WakuMessage{
+		Payload: []byte(message),
+		//Version:      &uint32(0),
+		ContentTopic:   ct.String(),
+		Timestamp:      utils.GetUnixEpoch(),
+		RateLimitProof: serializedRlnProof,
+	}
+
+	peerAddr, err := multiaddr.NewMultiaddr(peerMulti)
+	if err != nil {
+		return errors.Wrap(err, "error when creating multiaddr")
+	}
+
+	_, err = wakuNode.AddPeer(peerAddr, peerstore.Static, []string{pubsubTopic}, []libp2pprot.ID{lightpush.LightPushID_v20beta1}...)
+	if err != nil {
+		return errors.Wrap(err, "error when adding peer")
+	}
+	peerId, err := peer.AddrInfoFromP2pAddr(peerAddr)
+	if err != nil {
+		return errors.Wrap(err, "error when getting peer id")
+	}
+
+	log.WithFields(log.Fields{
+		"Epoch":         rlnProof.Epoch,
+		"Nullifier":     rlnProof.Nullifier,
+		"RLNIdentifier": rlnProof.RLNIdentifier,
+		"ShareX":        rlnProof.ShareX,
+		"ShareY":        rlnProof.ShareY,
+		"MerkleRoot":    rlnProof.MerkleRoot,
+		"Proof":         rlnProof.Proof,
+	}).Info("RLN Proof info")
+
+	// Publish our message via lightpush, using our locally crafted RLN proof
+	log.WithFields(log.Fields{
+		"LPPeer":       peerId.ID,
+		"PubsubTopic":  pubsubTopic,
+		"Payload":      string(msg.Payload),
+		"RLNProof":     msg.RateLimitProof,
+		"ContentTopic": ct.String(),
+		"Timestamp":    msg.Timestamp,
+	}).Info("Publishing via lightpush")
+
+	msgId, err := wakuNode.Lightpush().Publish(context.Background(), msg, lightpush.WithPeer(peerId.ID), lightpush.WithPubSubTopic(pubsubTopic))
+	if err != nil {
+		return errors.Wrap(err, "error when publishing message")
+	}
+
+	log.Info("Message sent with id: ", msgId)
+
+	return nil
+}
+
+// A mix of:
+// https://github.com/waku-org/go-waku/blob/8805f6cc45ff8c3c9d3d479d3fa8f5920fdc588f/waku/v2/protocol/rln/waku_rln_relay.go#L215-L218
+// https://github.com/waku-org/go-waku/blob/8805f6cc45ff8c3c9d3d479d3fa8f5920fdc588f/waku/v2/protocol/rln/waku_rln_relay.go#L288-L301
+func serializeRLNProof(proof *rln.RateLimitProof) ([]byte, error) {
+
+	test := &rlnpb.RateLimitProof{
+		Proof:         proof.Proof[:],
+		MerkleRoot:    proof.MerkleRoot[:],
+		Epoch:         proof.Epoch[:],
+		ShareX:        proof.ShareX[:],
+		ShareY:        proof.ShareY[:],
+		Nullifier:     proof.Nullifier[:],
+		RlnIdentifier: proof.RLNIdentifier[:],
+	}
+
+	ser, err := proto.Marshal(test)
+	if err != nil {
+		return nil, errors.Wrap(err, "error when marshalling proof")
+	}
+
+	return ser, nil
 }
