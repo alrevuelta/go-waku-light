@@ -815,7 +815,7 @@ func SendMessage(
 	lightpushPeer string,
 	pubsubTopic string) error {
 
-	wakuNode, err := node.New(node.WithLightPush(), node.WithClusterID(clusterId))
+	wakuNode, err := node.New(node.WithClusterID(clusterId))
 	if err != nil {
 		return errors.Wrap(err, "error when creating waku node")
 	}
