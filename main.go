@@ -30,7 +30,6 @@ import (
 
 	"github.com/waku-org/go-waku/waku/v2/node"
 	"github.com/waku-org/go-waku/waku/v2/peerstore"
-	"github.com/waku-org/go-waku/waku/v2/protocol"
 	"github.com/waku-org/go-waku/waku/v2/protocol/lightpush"
 	"github.com/waku-org/go-waku/waku/v2/protocol/pb"
 	rlnpb "github.com/waku-org/go-waku/waku/v2/protocol/rln/pb"
@@ -38,7 +37,7 @@ import (
 )
 
 const Endpoint = "wss://ws.cardona.zkevm-rpc.com"
-const RlnContractAddress = "0x16abffcab50e8d1ff5c22b118be5c56f801dce54"
+const RlnContractAddress = "0x520434D97e5eeD39a1F44C1f41A8024cB6138772"
 
 type Config struct {
 	client   *ethclient.Client
@@ -54,6 +53,10 @@ func main() {
 	var privKey string
 	var leafIndex uint64
 	var message string
+	var contentTopic string
+	var pubsubTopic string
+	var clusterId int
+	var lightpushPeer string
 
 	executionClient, err := ethclient.Dial(Endpoint)
 	if err != nil {
@@ -167,7 +170,7 @@ func main() {
 
 				Name: "local-merkle-proof",
 				Action: func(cCtx *cli.Context) error {
-					err := LocalMerkleProof(cfg, chunkSize, leafIndex)
+					_, err := LocalMerkleProof(cfg, chunkSize, leafIndex)
 					return err
 				},
 			},
@@ -182,10 +185,15 @@ func main() {
 						Destination: &message,
 						DefaultText: "Hello World!",
 					},
+					&cli.StringFlag{
+						Name:        "content-topic",
+						Destination: &contentTopic,
+						Value:       "/basic2/1/test/proto",
+					},
 				},
 				Name: "onchain-generate-rln-proof",
 				Action: func(cCtx *cli.Context) error {
-					_, err := OnchainGenerateRlnProof(cfg, membershipFile, message)
+					_, err := OnchainGenerateRlnProof(cfg, membershipFile, message, contentTopic)
 					return err
 				},
 			},
@@ -205,10 +213,15 @@ func main() {
 						Destination: &message,
 						DefaultText: "Hello World!",
 					},
+					&cli.StringFlag{
+						Name:        "content-topic",
+						Destination: &contentTopic,
+						Value:       "/basic2/1/test/proto",
+					},
 				},
 				Name: "local-generate-rln-proof",
 				Action: func(cCtx *cli.Context) error {
-					err := LocalGenerateRlnProof(cfg, chunkSize, membershipFile, message)
+					err := LocalGenerateRlnProof(cfg, chunkSize, membershipFile, message, contentTopic)
 					return err
 				},
 			},
@@ -223,10 +236,15 @@ func main() {
 						Destination: &message,
 						DefaultText: "Hello World!",
 					},
+					&cli.StringFlag{
+						Name:        "content-topic",
+						Destination: &contentTopic,
+						Value:       "/basic2/1/test/proto",
+					},
 				},
 				Name: "verify-rln-proof",
 				Action: func(cCtx *cli.Context) error {
-					err := VerifyRlnProof(cfg, proofFile, message)
+					err := VerifyRlnProof(cfg, proofFile, message, contentTopic)
 					return err
 				},
 			},
@@ -241,10 +259,37 @@ func main() {
 						Name:        "message",
 						Destination: &message,
 					},
+					&cli.StringFlag{
+						Name:        "content-topic",
+						Destination: &contentTopic,
+						Value:       "/basic2/1/test/proto",
+					},
+					&cli.StringFlag{
+						Name:        "lightpush-peer",
+						Destination: &lightpushPeer,
+						Value:       "/ip4/127.0.0.1/tcp/60000/p2p/16Uiu2HAkxTGJRgkCxgMDH4A4QBvw3q462BRkVJaPF5KQWkc1t4cp",
+					},
+					&cli.StringFlag{
+						Name:        "pubsub-topic",
+						Destination: &pubsubTopic,
+						Value:       "/waku/2/rs/100/0",
+					},
+					&cli.IntFlag{
+						Name:        "cluster-id",
+						Destination: &clusterId,
+						Value:       100,
+					},
 				},
 				Name: "send-message",
 				Action: func(cCtx *cli.Context) error {
-					err := SendMessage(cfg, membershipFile, message)
+					err := SendMessage(
+						cfg,
+						membershipFile,
+						message,
+						contentTopic,
+						uint16(clusterId),
+						lightpushPeer,
+						pubsubTopic)
 					return err
 				},
 			},
@@ -444,15 +489,15 @@ func OnchainMerkleProof(cfg *Config, leafIndex uint64) (*rln.MerkleProof, error)
 	return merkleProof, nil
 }
 
-func LocalMerkleProof(cfg *Config, chunkSize uint64, leafIndex uint64) error {
+func LocalMerkleProof(cfg *Config, chunkSize uint64, leafIndex uint64) (*rln.MerkleProof, error) {
 	rlnInstance, err := SyncTree(cfg, chunkSize)
 	if err != nil {
-		return errors.Wrap(err, "error when syncing tree")
+		return nil, errors.Wrap(err, "error when syncing tree")
 	}
 
 	proof, err := rlnInstance.GetMerkleProof(rln.MembershipIndex(leafIndex))
 	if err != nil {
-		return errors.Wrap(err, "error when fetching merkle proof")
+		return nil, errors.Wrap(err, "error when fetching merkle proof")
 	}
 
 	log.Info("Merkle elements for leaf ", leafIndex)
@@ -465,13 +510,19 @@ func LocalMerkleProof(cfg *Config, chunkSize uint64, leafIndex uint64) error {
 
 	log.Info("Full Merkle proof for leaf: ", leafIndex, " ", proof)
 
-	return nil
+	return &proof, nil
 }
 
 // Generates an rln zk proof to be attached to a message, proving membership
 // inclusion + respecting rate limits. It requires a valid rln membership that
 // has been registered in the contract.
-func LocalGenerateRlnProof(cfg *Config, chunkSize uint64, rlnFile string, message string) error {
+func LocalGenerateRlnProof(
+	cfg *Config,
+	chunkSize uint64,
+	rlnFile string,
+	message string,
+	contentTopic string) error {
+
 	idCred := &rln.IdentityCredential{}
 	jsonFile, err := os.Open(rlnFile)
 	if err != nil {
@@ -499,7 +550,11 @@ func LocalGenerateRlnProof(cfg *Config, chunkSize uint64, rlnFile string, messag
 		return errors.Wrap(err, "error when finding membership in tree")
 	}
 
-	proof, err := rlnInstance.GenerateProof([]byte(message), *idCred, rln.MembershipIndex(membershipIndex), rln.GetCurrentEpoch())
+	// Topic and message are used as inputs
+	// https://github.com/waku-org/go-waku/blob/v0.9.0/waku/v2/protocol/rln/common.go#L33-L40
+	x := append([]byte(message), []byte(contentTopic)...)
+
+	proof, err := rlnInstance.GenerateProof(x, *idCred, rln.MembershipIndex(membershipIndex), rln.GetCurrentEpoch())
 	if err != nil {
 		return errors.Wrap(err, "error when generating proof")
 	}
@@ -523,7 +578,12 @@ func LocalGenerateRlnProof(cfg *Config, chunkSize uint64, rlnFile string, messag
 	return nil
 }
 
-func OnchainGenerateRlnProof(cfg *Config, membershipFile string, message string) (*rln.RateLimitProof, error) {
+func OnchainGenerateRlnProof(
+	cfg *Config,
+	membershipFile string,
+	message string,
+	contentTopic string) (*rln.RateLimitProof, error) {
+
 	idCred := &rln.IdentityCredential{}
 	jsonFile, err := os.Open(membershipFile)
 	if err != nil {
@@ -566,9 +626,13 @@ func OnchainGenerateRlnProof(cfg *Config, membershipFile string, message string)
 		return nil, errors.Wrap(err, "error when fetching merkle proof")
 	}
 
+	// Topic and message are used as inputs
+	// https://github.com/waku-org/go-waku/blob/v0.9.0/waku/v2/protocol/rln/common.go#L33-L40
+	x := append([]byte(message), []byte(contentTopic)...)
+
 	rlnWitness := rln.CreateWitness(
 		idCred.IDSecretHash,
-		[]byte(message),
+		x,
 		rln.GetCurrentEpoch(),
 		*merkleProof)
 
@@ -596,7 +660,7 @@ func OnchainGenerateRlnProof(cfg *Config, membershipFile string, message string)
 	return proof, nil
 }
 
-func VerifyRlnProof(cfg *Config, proofFile string, message string) error {
+func VerifyRlnProof(cfg *Config, proofFile string, message string, contentTopic string) error {
 	proof := &rln.RateLimitProof{}
 	jsonFile, err := os.Open(proofFile)
 	if err != nil {
@@ -625,7 +689,11 @@ func VerifyRlnProof(cfg *Config, proofFile string, message string) error {
 		return errors.Wrap(err, "error when creating RLN instance")
 	}
 
-	verified, err := rlnInstance.Verify([]byte(message), *proof, rln.BigIntToBytes32(onchainRoot))
+	// Topic and message are used as inputs
+	// https://github.com/waku-org/go-waku/blob/v0.9.0/waku/v2/protocol/rln/common.go#L33-L40
+	x := append([]byte(message), []byte(contentTopic)...)
+
+	verified, err := rlnInstance.Verify(x, *proof, rln.BigIntToBytes32(onchainRoot))
 	if err != nil {
 		return errors.Wrap(err, "error when verifying proof")
 	}
@@ -738,10 +806,14 @@ func reverseBytes(b []byte) []byte {
 
 // See: https://github.com/waku-org/go-waku/blob/master/examples/basic-light-client/main.go
 // Note that this requires a running waku node with lightpush enabled at localhost.
-func SendMessage(cfg *Config, membershipFile string, message string) error {
-	clusterId := uint16(100)
-	peerMulti := "/ip4/127.0.0.1/tcp/60000/p2p/16Uiu2HAkxTGJRgkCxgMDH4A4QBvw3q462BRkVJaPF5KQWkc1t4cp"
-	pubsubTopic := "/waku/2/rs/100/0"
+func SendMessage(
+	cfg *Config,
+	membershipFile string,
+	message string,
+	contentTopic string,
+	clusterId uint16,
+	lightpushPeer string,
+	pubsubTopic string) error {
 
 	wakuNode, err := node.New(node.WithLightPush(), node.WithClusterID(clusterId))
 	if err != nil {
@@ -752,12 +824,7 @@ func SendMessage(cfg *Config, membershipFile string, message string) error {
 		return errors.Wrap(err, "error when starting waku node")
 	}
 
-	ct, err := protocol.NewContentTopic("basic2", "1", "test", "proto")
-	if err != nil {
-		return errors.Wrap(err, "error when creating content topic")
-	}
-
-	rlnProof, err := OnchainGenerateRlnProof(cfg, membershipFile, message)
+	rlnProof, err := OnchainGenerateRlnProof(cfg, membershipFile, message, contentTopic)
 	if err != nil {
 		return errors.Wrap(err, "error when generating rln proof")
 	}
@@ -770,12 +837,12 @@ func SendMessage(cfg *Config, membershipFile string, message string) error {
 	msg := &pb.WakuMessage{
 		Payload: []byte(message),
 		//Version:      &uint32(0),
-		ContentTopic:   ct.String(),
+		ContentTopic:   contentTopic,
 		Timestamp:      utils.GetUnixEpoch(),
 		RateLimitProof: serializedRlnProof,
 	}
 
-	peerAddr, err := multiaddr.NewMultiaddr(peerMulti)
+	peerAddr, err := multiaddr.NewMultiaddr(lightpushPeer)
 	if err != nil {
 		return errors.Wrap(err, "error when creating multiaddr")
 	}
@@ -805,7 +872,7 @@ func SendMessage(cfg *Config, membershipFile string, message string) error {
 		"PubsubTopic":  pubsubTopic,
 		"Payload":      string(msg.Payload),
 		"RLNProof":     msg.RateLimitProof,
-		"ContentTopic": ct.String(),
+		"ContentTopic": contentTopic,
 		"Timestamp":    msg.Timestamp,
 	}).Info("Publishing via lightpush")
 
