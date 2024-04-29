@@ -1,9 +1,36 @@
 # go-waku-light
 
-This repo contains a proof of concept for a `waku` light client, integrating [this](https://github.com/vacp2p/rln-contract/pull/31) modification of the RLN contract. It allows:
+This repo contains a proof of concept for a `waku` light client, integrating [this](https://github.com/vacp2p/rln-contract/pull/38) modification of the RLN contract. It allows to create RLN zk-proofs without having to synchronize the membership Merkle tree. It achieves so by getting the Merkle proof required to generate the zk RLN proof directly from the smart contract, included upstream [here](https://github.com/privacy-scaling-explorations/zk-kit/pull/162).
+
+And end to end integration can be done by creating a new network using [this modified contract](https://cardona-zkevm.polygonscan.com/address/0x520434D97e5eeD39a1F44C1f41A8024cB6138772) deployed in the Polygon zkEVM. We create two nodes.
+
+`node1`
+```
+docker run -p 60000:60000 harbor.status.im/wakuorg/nwaku:v0.27.0 --pubsub-topic=/waku/2/rs/100/0 --relay=true --lightpush=true --cluster-id=100 --rln-relay-dynamic=true --rln-relay=true --rln-relay-eth-client-address=https://rpc.cardona.zkevm-rpc.com --rln-relay-eth-contract-address=0x520434D97e5eeD39a1F44C1f41A8024cB6138772 --nodekey=fa900509b7da6211dc91715260dba7431457d51cc1bb0732a58eb84ec812de99 --log-level=DEBUG
+```
+
+And `node2`. Note that we use `TRACE` to verify that the message arrived correctly.
+```
+docker run -p 60001:60001 --network host harbor.status.im/wakuorg/nwaku:v0.27.0 --pubsub-topic=/waku/2/rs/100/0 --relay=true --lightpush=true --cluster-id=100 --rln-relay-dynamic=true --rln-relay=true --rln-relay-eth-client-address=https://rpc.cardona.zkevm-rpc.com --rln-relay-eth-contract-address=0x520434D97e5eeD39a1F44C1f41A8024cB6138772 --log-level=TRACE --staticnode=/ip4/127.0.0.1/tcp/60000/p2p/16Uiu2HAkxTGJRgkCxgMDH4A4QBvw3q462BRkVJaPF5KQWkc1t4cp --ports-shift=1
+```
+
+A `go-waku-light` client can first register an RLN membership:
+```
+./main register --priv-key=REPLACE_YOUR_PRIV_KEY
+```
+
+And then send a message with an RLN proof to the network via light push. Note that under the hood `node1` is used as lightpush.
+
+```
+./main send-message --membership-file=membership_xxx.json --message="light client sending a rln message"
+```
+
+Like this, a light client can generate valid RLN proofs without having to track the state of the membership tree.
+
+## Explanation
 * Faster sync time. Uses `GetCommitments` instead of fetching events.
 * Getting the Merkle root directly from the contract. No need to sync the whole tree.
-* Getting the Merkle proof for any leaf directly from the contract. Not need to sync the whole tree.
+* Getting the Merkle proof for any leaf directly from the contract. No need to sync the whole tree.
 
 For context, RLN is a decentralized rate-limiting protocol, that allows setting a limit on the number of messages sent by each entity, using zero-knowledge proofs. Said proofs prove that i) the member is whitelisted, without revealing its index, and ii) no more than 1 message is sent every epoch, which prevents double signaling.
 
@@ -12,7 +39,7 @@ The main motivation is to showcase how [this](https://github.com/vacp2p/rln-cont
 * Proof generation: Generating an RLN proof requires the Merkle proof of the leaf generating it. With this modification, said Merkle proof can be obtained directly from the contract.
 
 Notes:
-* Deployed in Polygon Layer 2 zkEVM, [see](https://cardona-zkevm.polygonscan.com/address/0x16abffcab50e8d1ff5c22b118be5c56f801dce54).
+* Deployed in Polygon Layer 2 zkEVM, [see](https://cardona-zkevm.polygonscan.com/address/0x520434D97e5eeD39a1F44C1f41A8024cB6138772).
 * This repo provides a simple CLI tool to showcase the functionalities.
 
 ## Usage
@@ -55,6 +82,12 @@ Any RLN proof can be verified against the smart contract Merkle root.
 ./main verify-rln-proof --proof-file=proof_xxx.json
 ```
 
+You can also create a valid RLN message using onchain Merkle proofs and send it via lightpush to a node using the following. Note that this uses a custom *ad hoc* test network. Start by running a couple of nodes and connect them to each other. See example in previous section.
+
+Now using your membership, introduce a message and it will be sent via lightpush using the first node. You should see that both nodes verify the RLN proof ok and relay the message to each other.
+```
+./main send-message --membership-file=membership_xxx.json --message="light client sending a rln message"
+```
 
 ## Advanced
 
