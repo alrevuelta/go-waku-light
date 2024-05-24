@@ -9,10 +9,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"main/contract"
 	"math/big"
 	"os"
 	"time"
+
+	"github.com/alrevuelta/go-waku-light/contract"
 
 	"github.com/libp2p/go-libp2p/core/peer"
 	libp2pprot "github.com/libp2p/go-libp2p/core/protocol"
