@@ -1,4 +1,4 @@
-module main
+module github.com/alrevuelta/go-waku-light
 
 go 1.20
 
