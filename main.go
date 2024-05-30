@@ -821,8 +821,8 @@ func SyncTree(cfg *Config, chunkSize uint64) (*rln.RLN, error) {
 		}
 
 		for _, leaf := range leafs {
-			log.Info("member")
-			err := rlnInstance.InsertMember(rln.BigIntToBytes32(leaf), UserMessageLimit)
+			// TODO: Bump zerokit version to get this function
+			err := rlnInstance.InsertLeaf(rln.BigIntToBytes32(leaf))
 			if err != nil {
 				return nil, errors.Wrap(err, "error when inserting member")
 			}
