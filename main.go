@@ -14,28 +14,23 @@ import (
 	"time"
 
 	"github.com/alrevuelta/go-waku-light/contract"
-
-	"github.com/libp2p/go-libp2p/core/peer"
-	libp2pprot "github.com/libp2p/go-libp2p/core/protocol"
-	"github.com/multiformats/go-multiaddr"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"github.com/waku-org/go-zerokit-rln/rln"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/pkg/errors"
-
-	"github.com/waku-org/go-waku/waku/v2/node"
-	"github.com/waku-org/go-waku/waku/v2/peerstore"
-	"github.com/waku-org/go-waku/waku/v2/protocol/lightpush"
-	"github.com/waku-org/go-waku/waku/v2/protocol/pb"
-	rlnpb "github.com/waku-org/go-waku/waku/v2/protocol/rln/pb"
-	"github.com/waku-org/go-waku/waku/v2/utils"
+	//"github.com/waku-org/go-waku/waku/v2/node"
+	//"github.com/waku-org/go-waku/waku/v2/peerstore"
+	//"github.com/waku-org/go-waku/waku/v2/protocol/lightpush"
+	//"github.com/waku-org/go-waku/waku/v2/protocol/pb"
+	//"github.com/waku-org/go-waku/waku/v2/utils"
 )
+
+const UserMessageLimit = 10
 
 type Config struct {
 	client   *ethclient.Client
@@ -59,24 +54,24 @@ func main() {
 	var contractAddress string
 
 	// Examples of usage:
-	// ./main register --priv-key=REPLACE_YOUR_PRIV_KEY
-	// ./main listen
+	// ./go-waku-light register --priv-key=REPLACE_YOUR_PRIV_KEY
+	// ./go-waku-light listen
 
 	// Fetched direcly from the contract
-	// ./main onchain-root
-	// ./main onchain-merkle-proof --leaf-index=1
+	// ./go-waku-light onchain-root
+	// ./go-waku-light onchain-merkle-proof --leaf-index=1
 
 	// Syncronized via events locally
-	// ./main local-root --chunk-size=500
-	// ./main local-merkle-proof --chunk-size=500 --leaf-index=1
+	// ./go-waku-light local-root --chunk-size=500
+	// ./go-waku-light local-merkle-proof --chunk-size=500 --leaf-index=1
 
 	// RLN Related
-	// ./main onchain-generate-rln-proof --membership-file=membership_xxx.json
-	// ./main local-generate-rln-proof --membership-file=membership_xxx.json --chunk-size=500
-	// ./main verify-rln-proof --proof-file=proof_xxx.json
+	// ./go-waku-light onchain-generate-rln-proof --membership-file=membership_xxx.json
+	// ./go-waku-light local-generate-rln-proof --membership-file=membership_xxx.json --chunk-size=500
+	// ./go-waku-light verify-rln-proof --proof-file=proof_xxx.json
 
 	// Publish message via lightpush
-	// ./main send-message --membership-file=membership_xxx.json --message="light client sending a rln message"
+	// ./go-waku-light send-message --membership-file=membership_xxx.json --message="light client sending a rln message"
 	app := &cli.App{
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -320,15 +315,19 @@ func main() {
 					if err != nil {
 						return errors.Wrap(err, "error when creating config")
 					}
-					err = SendMessage(
-						cfg,
-						membershipFile,
-						message,
-						contentTopic,
-						uint16(clusterId),
-						lightpushPeer,
-						pubsubTopic)
-					return err
+					_ = cfg
+					/*
+						err := SendMessage(
+							cfg,
+							membershipFile,
+							message,
+							contentTopic,
+							uint16(clusterId),
+							lightpushPeer,
+							pubsubTopic)
+						return err
+					*/
+					return nil
 				},
 			},
 		},
@@ -417,12 +416,12 @@ func Register(cfg *Config, privKey string, amount int) error {
 		mBig := rln.Bytes32ToBigInt(m.IDCommitment)
 
 		// Create a tx calling the update rewards root function with the new merkle root
-		tx, err := cfg.contract.Register(auth, mBig)
+		tx, err := cfg.contract.Register(auth, mBig, UserMessageLimit)
 		if err != nil {
 			return errors.Wrap(err, "error when sending tx")
 		}
 
-		log.Info("Tx sent. Nonce: ", auth.Nonce, " Commitment: ", mBig, " TxHash: ", tx.Hash().Hex())
+		log.Info("Tx sent. Nonce: ", auth.Nonce, " Commitment: ", mBig, " UserMessageLimit: ", UserMessageLimit, "TxHash: ", tx.Hash().Hex())
 
 		rankingsJson, err := json.Marshal(m)
 		if err != nil {
@@ -608,7 +607,23 @@ func LocalGenerateRlnProof(
 	// https://github.com/waku-org/go-waku/blob/v0.9.0/waku/v2/protocol/rln/common.go#L33-L40
 	x := append([]byte(message), []byte(contentTopic)...)
 
-	proof, err := rlnInstance.GenerateProof(x, *idCred, rln.MembershipIndex(membershipIndex), rln.GetCurrentEpoch())
+	/*
+		data []byte,
+		key IdentityCredential,
+		index MembershipIndex,
+		epoch Epoch,
+		messageId uint32
+	*/
+
+	messageId := uint32(1)
+
+	proof, err := rlnInstance.GenerateProof(
+		x, // TODO: is this x? or data (which is x hashed with topic)
+		*idCred,
+		rln.MembershipIndex(membershipIndex),
+		rln.GetCurrentEpoch(),
+		messageId)
+
 	if err != nil {
 		return errors.Wrap(err, "error when generating proof")
 	}
@@ -669,13 +684,18 @@ func OnchainGenerateRlnProof(
 		return nil, errors.New("membership does not exist in the contract")
 	}
 
-	membershipIndex, err := cfg.contract.Members(callOpts, rln.Bytes32ToBigInt(idCred.IDCommitment))
+	userMessageLimit, membershipIndex, rateCommitment, err := cfg.contract.IdCommitmentToMetadata(callOpts, rln.Bytes32ToBigInt(idCred.IDCommitment))
 	if err != nil {
 		return nil, errors.Wrap(err, "error when fetching membership index")
 	}
-	log.Info("Membership index found in the contract: ", membershipIndex, " for the provided commitment")
 
-	merkleProof, err := OnchainMerkleProof(cfg, membershipIndex.Uint64())
+	log.WithFields(log.Fields{
+		"UserMessageLimit": userMessageLimit,
+		"MembershipIndex":  membershipIndex,
+		"RateCommitment":   rateCommitment,
+	}).Info("Commitment metadata")
+
+	merkleProof, err := OnchainMerkleProof(cfg, uint64(membershipIndex))
 	if err != nil {
 		return nil, errors.Wrap(err, "error when fetching merkle proof")
 	}
@@ -684,11 +704,18 @@ func OnchainGenerateRlnProof(
 	// https://github.com/waku-org/go-waku/blob/v0.9.0/waku/v2/protocol/rln/common.go#L33-L40
 	x := append([]byte(message), []byte(contentTopic)...)
 
-	rlnWitness := rln.CreateWitness(
+	messageId := uint32(10)
+	rlnWitness, err := rlnInstance.CreateWitness(
 		idCred.IDSecretHash,
-		x,
+		UserMessageLimit,
+		messageId,
+		x, // TODO: this is not really x
 		rln.GetCurrentEpoch(),
 		*merkleProof)
+
+	if err != nil {
+		return nil, errors.Wrap(err, "error when creating witness")
+	}
 
 	proof, err := rlnInstance.GenerateRLNProofWithWitness(rlnWitness)
 	if err != nil {
@@ -759,12 +786,6 @@ func VerifyRlnProof(cfg *Config, proofFile string, message string, contentTopic 
 		return errors.New("proof verification failed")
 	}
 
-	metadata, err := rlnInstance.ExtractMetadata(*proof)
-	if err != nil {
-		return errors.Wrap(err, "error when extracting metadata")
-	}
-	_ = metadata
-
 	log.Info("Proof verified succesfully")
 
 	return nil
@@ -785,21 +806,23 @@ func SyncTree(cfg *Config, chunkSize uint64) (*rln.RLN, error) {
 		return nil, errors.Wrap(err, "error when fetching num leafs")
 	}
 
-	for i := uint64(0); i < numLeafs.Uint64(); i += chunkSize {
-		start := big.NewInt(0).SetUint64(i)
-		end := big.NewInt(0).SetUint64(i + chunkSize)
+	for i := uint64(0); i < uint64(numLeafs-1); i += chunkSize {
+		start := i
+		end := i + chunkSize
 
-		if end.Cmp(numLeafs) > 0 {
-			end.Set(numLeafs)
+		if end > uint64(numLeafs-1) {
+			end = uint64(numLeafs - 1)
 		}
 		log.Info("Fetching from ", start, " to ", end, " out of ", numLeafs, " leafs")
-		leafs, err := cfg.contract.GetCommitments(callOpts, start, end)
+		// TODO: This was changed. Its now [start, end] instead of [start, end)
+		leafs, err := cfg.contract.GetCommitments(callOpts, uint32(start), uint32(end))
 		if err != nil {
 			return nil, errors.Wrap(err, "error when fetching commitments")
 		}
 
 		for _, leaf := range leafs {
-			err := rlnInstance.InsertMember(rln.BigIntToBytes32(leaf))
+			log.Info("member")
+			err := rlnInstance.InsertMember(rln.BigIntToBytes32(leaf), UserMessageLimit)
 			if err != nil {
 				return nil, errors.Wrap(err, "error when inserting member")
 			}
@@ -860,6 +883,7 @@ func reverseBytes(b []byte) []byte {
 
 // See: https://github.com/waku-org/go-waku/blob/master/examples/basic-light-client/main.go
 // Note that this requires a running waku node with lightpush enabled at localhost.
+/*
 func SendMessage(
 	cfg *Config,
 	membershipFile string,
@@ -883,7 +907,10 @@ func SendMessage(
 		return errors.Wrap(err, "error when generating rln proof")
 	}
 
-	serializedRlnProof, err := serializeRLNProof(rlnProof)
+	// TODO: Get current timestamp
+	epoch := rln.ToEpoch(3)
+
+	serializedRlnProof, err := serializeRLNProof(rlnProof, epoch, rln.RLN_IDENTIFIER[:])
 	if err != nil {
 		return errors.Wrap(err, "error when serializing rln proof")
 	}
@@ -911,13 +938,12 @@ func SendMessage(
 	}
 
 	log.WithFields(log.Fields{
-		"Epoch":         rlnProof.Epoch,
-		"Nullifier":     rlnProof.Nullifier,
-		"RLNIdentifier": rlnProof.RLNIdentifier,
-		"ShareX":        rlnProof.ShareX,
-		"ShareY":        rlnProof.ShareY,
-		"MerkleRoot":    rlnProof.MerkleRoot,
-		"Proof":         rlnProof.Proof,
+		"Proof":             rlnProof.Proof,
+		"MerkleRoot":        rlnProof.MerkleRoot,
+		"ExternalNullifier": rlnProof.ExternalNullifier,
+		"ShareX":            rlnProof.ShareX,
+		"ShareY":            rlnProof.ShareY,
+		"Nullifier":         rlnProof.Nullifier,
 	}).Info("RLN Proof info")
 
 	// Publish our message via lightpush, using our locally crafted RLN proof
@@ -939,12 +965,14 @@ func SendMessage(
 
 	return nil
 }
-
+*/
 // A mix of:
 // https://github.com/waku-org/go-waku/blob/8805f6cc45ff8c3c9d3d479d3fa8f5920fdc588f/waku/v2/protocol/rln/waku_rln_relay.go#L215-L218
 // https://github.com/waku-org/go-waku/blob/8805f6cc45ff8c3c9d3d479d3fa8f5920fdc588f/waku/v2/protocol/rln/waku_rln_relay.go#L288-L301
+/* TODO: Remove this
 func serializeRLNProof(proof *rln.RateLimitProof) ([]byte, error) {
 
+	// TODO: This has changed
 	test := &rlnpb.RateLimitProof{
 		Proof:         proof.Proof[:],
 		MerkleRoot:    proof.MerkleRoot[:],
@@ -961,4 +989,41 @@ func serializeRLNProof(proof *rln.RateLimitProof) ([]byte, error) {
 	}
 
 	return ser, nil
+}
+*/
+
+// https://github.com/waku-org/nwaku/blob/v0.28.0/waku/waku_rln_relay/protocol_types.nim#L35
+// serialized as: https://github.com/waku-org/nwaku/blob/v0.28.0/waku/waku_rln_relay/protocol_types.nim#L109
+func serializeRLNProof(proof *rln.RateLimitProof, epoch rln.Epoch, rlnIdentifier []byte) ([]byte, error) {
+
+	/*
+			  output.write3(1, nsp.proof)
+		  output.write3(2, nsp.merkleRoot)
+		  output.write3(3, nsp.epoch)
+		  output.write3(4, nsp.shareX)
+		  output.write3(5, nsp.shareY)
+		  output.write3(6, nsp.nullifier)
+		  output.write3(7, nsp.rlnIdentifier)
+	*/
+
+	/*
+		test := &rlnpb.RateLimitProof{
+			Proof:         proof.Proof[:],
+			MerkleRoot:    proof.MerkleRoot[:],
+			Epoch:         epoch[:],
+			ShareX:        proof.ShareX[:],
+			ShareY:        proof.ShareY[:],
+			Nullifier:     proof.Nullifier[:],
+			RlnIdentifier: rlnIdentifier[:],
+		}
+
+		ser, err := proto.Marshal(test)
+		if err != nil {
+			return nil, errors.Wrap(err, "error when marshalling proof")
+		}
+
+		return ser, nil*/
+
+	remove := make([]byte, 0)
+	return remove, nil
 }
