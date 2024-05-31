@@ -9,14 +9,19 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"math/big"
 	"os"
 	"time"
 
-	"github.com/alrevuelta/go-waku-light/contract"
+	libp2pProtocol "github.com/libp2p/go-libp2p/core/protocol"
+	wpb "github.com/waku-org/go-waku/waku/v2/protocol/pb"
 
+	"github.com/alrevuelta/go-waku-light/contract"
+	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/peer"
-	libp2pprot "github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/libp2p/go-libp2p/core/peerstore"
+	"github.com/libp2p/go-msgio/pbio"
 	"github.com/multiformats/go-multiaddr"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -29,11 +34,10 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/pkg/errors"
 
-	"github.com/waku-org/go-waku/waku/v2/node"
-	"github.com/waku-org/go-waku/waku/v2/peerstore"
-	"github.com/waku-org/go-waku/waku/v2/protocol/lightpush"
-	"github.com/waku-org/go-waku/waku/v2/protocol/pb"
-	rlnpb "github.com/waku-org/go-waku/waku/v2/protocol/rln/pb"
+	//"github.com/waku-org/go-waku/waku/v2/peerstore"
+
+	"github.com/waku-org/go-waku/waku/v2/protocol/lightpush/pb"
+	rlnpb "github.com/waku-org/go-waku/waku/v2/protocol/rln/pb" // TODO: remove
 	"github.com/waku-org/go-waku/waku/v2/utils"
 )
 
@@ -283,7 +287,7 @@ func main() {
 				},
 				Name: "send-message",
 				Action: func(cCtx *cli.Context) error {
-					err := SendMessage(
+					err := SendMessage2(
 						cfg,
 						membershipFile,
 						message,
@@ -807,6 +811,7 @@ func reverseBytes(b []byte) []byte {
 
 // See: https://github.com/waku-org/go-waku/blob/master/examples/basic-light-client/main.go
 // Note that this requires a running waku node with lightpush enabled at localhost.
+/*
 func SendMessage(
 	cfg *Config,
 	membershipFile string,
@@ -886,7 +891,7 @@ func SendMessage(
 
 	return nil
 }
-
+*/
 // A mix of:
 // https://github.com/waku-org/go-waku/blob/8805f6cc45ff8c3c9d3d479d3fa8f5920fdc588f/waku/v2/protocol/rln/waku_rln_relay.go#L215-L218
 // https://github.com/waku-org/go-waku/blob/8805f6cc45ff8c3c9d3d479d3fa8f5920fdc588f/waku/v2/protocol/rln/waku_rln_relay.go#L288-L301
@@ -908,4 +913,97 @@ func serializeRLNProof(proof *rln.RateLimitProof) ([]byte, error) {
 	}
 
 	return ser, nil
+}
+
+func SendMessage2(
+	cfg *Config,
+	membershipFile string,
+	message string,
+	contentTopic string,
+	clusterId uint16,
+	lightpushPeer string,
+	pubsubTopic string) error {
+	//libP2POpts := append(w.opts.libP2POpts, libp2p.ConnectionGater(connGater))
+
+	rlnProof, err := OnchainGenerateRlnProof(cfg, membershipFile, message, contentTopic)
+	if err != nil {
+		return errors.Wrap(err, "error when generating rln proof")
+	}
+
+	serializedRlnProof, err := serializeRLNProof(rlnProof)
+	if err != nil {
+		return errors.Wrap(err, "error when serializing rln proof")
+	}
+
+	// TODO: The idea would be to get rid of this dependancy
+	msg := &wpb.WakuMessage{
+		Payload: []byte(message),
+		//Version:      &uint32(0),
+		ContentTopic:   contentTopic,
+		Timestamp:      utils.GetUnixEpoch(),
+		RateLimitProof: serializedRlnProof,
+	}
+
+	host, err := libp2p.New()
+	if err != nil {
+		return err
+	}
+
+	peerAddr, err := multiaddr.NewMultiaddr(lightpushPeer)
+	if err != nil {
+		return errors.Wrap(err, "error when creating multiaddr")
+	}
+
+	peerId, err := peer.AddrInfoFromP2pAddr(peerAddr)
+	if err != nil {
+		return errors.Wrap(err, "error when getting peer id")
+	}
+
+	//host.Peerstore().AddAddrs(peerId.ID, []multiaddr.Multiaddr{peerAddr}, peerstore.PermanentAddrTTL)
+	host.Peerstore().AddAddr(peerId.ID, peerAddr, peerstore.PermanentAddrTTL)
+
+	const LightPushID_v20beta1 = libp2pProtocol.ID("/vac/waku/lightpush/2.0.0-beta1")
+	stream, err := host.NewStream(context.Background(), peerId.ID, LightPushID_v20beta1)
+	if err != nil {
+		return errors.Wrap(err, "error when creating stream")
+	}
+
+	writer := pbio.NewDelimitedWriter(stream)
+	reader := pbio.NewDelimitedReader(stream, math.MaxInt32)
+
+	// TODO: unsure about this
+	requestId := "TODO"
+
+	req := new(pb.PushRequest)
+	req.Message = msg
+	req.PubsubTopic = pubsubTopic
+
+	// req is a protobuf. can i skip having to import all protos and generate all proto go files?
+	pushRequestRPC := &pb.PushRpc{RequestId: requestId, Request: req}
+
+	log.Info("writter:", writer)
+
+	err = writer.WriteMsg(pushRequestRPC)
+	if err != nil {
+		if err := stream.Reset(); err != nil {
+			log.Error(err)
+		}
+		return err
+	}
+
+	pushResponseRPC := &pb.PushRpc{}
+	err = reader.ReadMsg(pushResponseRPC)
+	if err != nil {
+		log.Error(err)
+
+		if err := stream.Reset(); err != nil {
+			log.Error(err)
+		}
+		return err
+	}
+
+	stream.Close()
+
+	return nil
+
 }
