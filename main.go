@@ -421,7 +421,7 @@ func Register(cfg *Config, privKey string, amount int) error {
 			return errors.Wrap(err, "error when sending tx")
 		}
 
-		log.Info("Tx sent. Nonce: ", auth.Nonce, " Commitment: ", mBig, " UserMessageLimit: ", UserMessageLimit, "TxHash: ", tx.Hash().Hex())
+		log.Info("Tx sent. Nonce: ", auth.Nonce, " Commitment: ", mBig, " UserMessageLimit: ", UserMessageLimit, " TxHash: ", tx.Hash().Hex())
 
 		rankingsJson, err := json.Marshal(m)
 		if err != nil {
@@ -821,8 +821,7 @@ func SyncTree(cfg *Config, chunkSize uint64) (*rln.RLN, error) {
 		}
 
 		for _, leaf := range leafs {
-			// TODO: Bump zerokit version to get this function
-			err := rlnInstance.InsertLeaf(rln.BigIntToBytes32(leaf))
+			err := rlnInstance.InsertRawLeaf(rln.BigIntToBytes32(leaf))
 			if err != nil {
 				return nil, errors.Wrap(err, "error when inserting member")
 			}
