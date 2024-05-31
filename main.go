@@ -14,8 +14,21 @@ import (
 	"time"
 
 	"github.com/alrevuelta/go-waku-light/contract"
+	"github.com/libp2p/go-libp2p/core/peer"
+	libp2pprot "github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/multiformats/go-multiaddr"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+
+	// TODO: The go-waku version that shall be imported is a custom one
+	// otherwise there is a problem with go-zerokit since go-waku-light
+	// uses a version that go-waku does not use. Temporal hack
+	// TODO: At some point remove the dependancy from go-waku
+	"github.com/waku-org/go-waku/waku/v2/node"
+	"github.com/waku-org/go-waku/waku/v2/peerstore"
+	"github.com/waku-org/go-waku/waku/v2/protocol/lightpush"
+	"github.com/waku-org/go-waku/waku/v2/protocol/pb"
+	"github.com/waku-org/go-waku/waku/v2/utils"
 	"github.com/waku-org/go-zerokit-rln/rln"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -23,11 +36,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/pkg/errors"
-	//"github.com/waku-org/go-waku/waku/v2/node"
-	//"github.com/waku-org/go-waku/waku/v2/peerstore"
-	//"github.com/waku-org/go-waku/waku/v2/protocol/lightpush"
-	//"github.com/waku-org/go-waku/waku/v2/protocol/pb"
-	//"github.com/waku-org/go-waku/waku/v2/utils"
 )
 
 const UserMessageLimit = 10
@@ -882,7 +890,7 @@ func reverseBytes(b []byte) []byte {
 
 // See: https://github.com/waku-org/go-waku/blob/master/examples/basic-light-client/main.go
 // Note that this requires a running waku node with lightpush enabled at localhost.
-/*
+
 func SendMessage(
 	cfg *Config,
 	membershipFile string,
@@ -964,7 +972,7 @@ func SendMessage(
 
 	return nil
 }
-*/
+
 // A mix of:
 // https://github.com/waku-org/go-waku/blob/8805f6cc45ff8c3c9d3d479d3fa8f5920fdc588f/waku/v2/protocol/rln/waku_rln_relay.go#L215-L218
 // https://github.com/waku-org/go-waku/blob/8805f6cc45ff8c3c9d3d479d3fa8f5920fdc588f/waku/v2/protocol/rln/waku_rln_relay.go#L288-L301
