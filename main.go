@@ -37,9 +37,6 @@ import (
 	"github.com/waku-org/go-waku/waku/v2/utils"
 )
 
-const Endpoint = "wss://ws.cardona.zkevm-rpc.com"
-const RlnContractAddress = "0x520434D97e5eeD39a1F44C1f41A8024cB6138772"
-
 type Config struct {
 	client   *ethclient.Client
 	contract *contract.Contract
@@ -58,21 +55,8 @@ func main() {
 	var pubsubTopic string
 	var clusterId int
 	var lightpushPeer string
-
-	executionClient, err := ethclient.Dial(Endpoint)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	address := common.HexToAddress(RlnContractAddress)
-	contract, err := contract.NewContract(address, executionClient)
-	if err != nil {
-		log.Fatal(err)
-	}
-	cfg := &Config{
-		client:   executionClient,
-		contract: contract,
-	}
+	var ethEndpoint string
+	var contractAddress string
 
 	// Examples of usage:
 	// ./main register --priv-key=REPLACE_YOUR_PRIV_KEY
@@ -94,6 +78,18 @@ func main() {
 	// Publish message via lightpush
 	// ./main send-message --membership-file=membership_xxx.json --message="light client sending a rln message"
 	app := &cli.App{
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:        "eth-endpoint",
+				Value:       "wss://ws.cardona.zkevm-rpc.com",
+				Destination: &ethEndpoint,
+			},
+			&cli.StringFlag{
+				Name:        "contract-address",
+				Value:       "0x520434D97e5eeD39a1F44C1f41A8024cB6138772",
+				Destination: &contractAddress,
+			},
+		},
 		Commands: []*cli.Command{
 			{
 				Flags: []cli.Flag{
@@ -105,25 +101,38 @@ func main() {
 					&cli.StringFlag{
 						Name:        "priv-key",
 						Destination: &privKey,
+						Required:    true,
 					},
 				},
 				Name: "register",
 				Action: func(cCtx *cli.Context) error {
-					err := Register(cfg, privKey, amountRegister)
+					cfg, err := CreateConfig(ethEndpoint, contractAddress)
+					if err != nil {
+						return errors.Wrap(err, "error when creating config")
+					}
+					err = Register(cfg, privKey, amountRegister)
 					return err
 				},
 			},
 			{
 				Name: "listen",
 				Action: func(cCtx *cli.Context) error {
-					err := Listen(cfg)
+					cfg, err := CreateConfig(ethEndpoint, contractAddress)
+					if err != nil {
+						return errors.Wrap(err, "error when creating config")
+					}
+					err = Listen(cfg)
 					return err
 				},
 			},
 			{
 				Name: "onchain-root",
 				Action: func(cCtx *cli.Context) error {
-					err := OnchainRoot(cfg)
+					cfg, err := CreateConfig(ethEndpoint, contractAddress)
+					if err != nil {
+						return errors.Wrap(err, "error when creating config")
+					}
+					err = OnchainRoot(cfg)
 					return err
 				},
 			},
@@ -137,7 +146,11 @@ func main() {
 
 				Name: "onchain-merkle-proof",
 				Action: func(cCtx *cli.Context) error {
-					_, err := OnchainMerkleProof(cfg, leafIndex)
+					cfg, err := CreateConfig(ethEndpoint, contractAddress)
+					if err != nil {
+						return errors.Wrap(err, "error when creating config")
+					}
+					_, err = OnchainMerkleProof(cfg, leafIndex)
 					return err
 				},
 			},
@@ -152,7 +165,11 @@ func main() {
 
 				Name: "local-root",
 				Action: func(cCtx *cli.Context) error {
-					_, err := SyncTree(cfg, chunkSize)
+					cfg, err := CreateConfig(ethEndpoint, contractAddress)
+					if err != nil {
+						return errors.Wrap(err, "error when creating config")
+					}
+					_, err = SyncTree(cfg, chunkSize)
 					return err
 				},
 			},
@@ -171,7 +188,11 @@ func main() {
 
 				Name: "local-merkle-proof",
 				Action: func(cCtx *cli.Context) error {
-					_, err := LocalMerkleProof(cfg, chunkSize, leafIndex)
+					cfg, err := CreateConfig(ethEndpoint, contractAddress)
+					if err != nil {
+						return errors.Wrap(err, "error when creating config")
+					}
+					_, err = LocalMerkleProof(cfg, chunkSize, leafIndex)
 					return err
 				},
 			},
@@ -194,7 +215,11 @@ func main() {
 				},
 				Name: "onchain-generate-rln-proof",
 				Action: func(cCtx *cli.Context) error {
-					_, err := OnchainGenerateRlnProof(cfg, membershipFile, message, contentTopic)
+					cfg, err := CreateConfig(ethEndpoint, contractAddress)
+					if err != nil {
+						return errors.Wrap(err, "error when creating config")
+					}
+					_, err = OnchainGenerateRlnProof(cfg, membershipFile, message, contentTopic)
 					return err
 				},
 			},
@@ -222,7 +247,11 @@ func main() {
 				},
 				Name: "local-generate-rln-proof",
 				Action: func(cCtx *cli.Context) error {
-					err := LocalGenerateRlnProof(cfg, chunkSize, membershipFile, message, contentTopic)
+					cfg, err := CreateConfig(ethEndpoint, contractAddress)
+					if err != nil {
+						return errors.Wrap(err, "error when creating config")
+					}
+					err = LocalGenerateRlnProof(cfg, chunkSize, membershipFile, message, contentTopic)
 					return err
 				},
 			},
@@ -245,7 +274,11 @@ func main() {
 				},
 				Name: "verify-rln-proof",
 				Action: func(cCtx *cli.Context) error {
-					err := VerifyRlnProof(cfg, proofFile, message, contentTopic)
+					cfg, err := CreateConfig(ethEndpoint, contractAddress)
+					if err != nil {
+						return errors.Wrap(err, "error when creating config")
+					}
+					err = VerifyRlnProof(cfg, proofFile, message, contentTopic)
 					return err
 				},
 			},
@@ -283,7 +316,11 @@ func main() {
 				},
 				Name: "send-message",
 				Action: func(cCtx *cli.Context) error {
-					err := SendMessage(
+					cfg, err := CreateConfig(ethEndpoint, contractAddress)
+					if err != nil {
+						return errors.Wrap(err, "error when creating config")
+					}
+					err = SendMessage(
 						cfg,
 						membershipFile,
 						message,
@@ -302,11 +339,31 @@ func main() {
 	}
 }
 
+func CreateConfig(endpoint string, contractAddress string) (*Config, error) {
+	log.Info("Connecting to ", endpoint, " and contract ", contractAddress)
+	executionClient, err := ethclient.Dial(endpoint)
+	if err != nil {
+		return nil, errors.Wrap(err, "error when creating client")
+	}
+
+	address := common.HexToAddress(contractAddress)
+	contract, err := contract.NewContract(address, executionClient)
+	if err != nil {
+		return nil, errors.Wrap(err, "error when creating contract")
+	}
+	cfg := &Config{
+		client:   executionClient,
+		contract: contract,
+	}
+
+	return cfg, nil
+}
+
 // Register a new membership into the rln contract, and stores its in a json file. Note that the json
 // is not a keystore, but just a custom serialized struct. Registering requires providing a valid
 // account with enough funds.
 func Register(cfg *Config, privKey string, amount int) error {
-	log.Info("Configured contract ", RlnContractAddress, " registering ", amount, " memberships")
+	log.Info("Registering ", amount, " memberships")
 	rlnInstance, err := rln.NewRLN()
 	if err != nil {
 		return errors.Wrap(err, "error when creating RLN instance")
@@ -385,8 +442,6 @@ func Register(cfg *Config, privKey string, amount int) error {
 // Listens for new registrations and logs new root. Note that slashings are not
 // monitored.
 func Listen(cfg *Config) error {
-	log.Info("Configured contract ", RlnContractAddress)
-
 	callOpts := &bind.CallOpts{Context: context.Background(), Pending: false}
 	onchainRoot, err := cfg.contract.Root(callOpts)
 	if err != nil {
@@ -439,7 +494,6 @@ func Listen(cfg *Config) error {
 
 // Gets the merkle root from the contract and logs it.
 func OnchainRoot(cfg *Config) error {
-	log.Info("Configured contract ", RlnContractAddress)
 	callOpts := &bind.CallOpts{Context: context.Background(), Pending: false}
 	onchainRoot, err := cfg.contract.Root(callOpts)
 	if err != nil {
@@ -458,7 +512,6 @@ func OnchainRoot(cfg *Config) error {
 }
 
 func OnchainMerkleProof(cfg *Config, leafIndex uint64) (*rln.MerkleProof, error) {
-	log.Info("Configured contract ", RlnContractAddress)
 	callOpts := &bind.CallOpts{Context: context.Background(), Pending: false}
 
 	merkleProofElements, err := cfg.contract.MerkleProofElements(callOpts, big.NewInt(0).SetUint64(leafIndex))
