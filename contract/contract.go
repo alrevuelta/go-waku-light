@@ -31,7 +31,7 @@ var (
 
 // ContractMetaData contains all meta data concerning the Contract contract.
 var ContractMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"DuplicateIdCommitment\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"ERC1967InvalidImplementation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ERC1967NonPayable\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedCall\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FullTree\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"idCommitment\",\"type\":\"uint256\"}],\"name\":\"InvalidIdCommitment\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"startIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"endIndex\",\"type\":\"uint256\"}],\"name\":\"InvalidPaginationQuery\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"messageLimit\",\"type\":\"uint32\"}],\"name\":\"InvalidUserMessageLimit\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializing\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"UUPSUnauthorizedCallContext\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"slot\",\"type\":\"bytes32\"}],\"name\":\"UUPSUnsupportedProxiableUUID\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"idCommitment\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"userMessageLimit\",\"type\":\"uint32\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"index\",\"type\":\"uint32\"}],\"name\":\"MemberRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"DEPTH\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MAX_MESSAGE_LIMIT\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"Q\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"SET_SIZE\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"UPGRADE_INTERFACE_VERSION\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"deployedBlockNumber\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"startIndex\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"endIndex\",\"type\":\"uint32\"}],\"name\":\"getCommitments\",\"outputs\":[{\"internalType\":\"uint256[]\",\"name\":\"\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"idCommitmentIndex\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"idCommitment\",\"type\":\"uint256\"}],\"name\":\"idCommitmentToMetadata\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"imtData\",\"outputs\":[{\"internalType\":\"uint40\",\"name\":\"maxIndex\",\"type\":\"uint40\"},{\"internalType\":\"uint40\",\"name\":\"numberOfLeaves\",\"type\":\"uint40\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"initialOwner\",\"type\":\"address\"},{\"internalType\":\"uint32\",\"name\":\"maxMessageLimit\",\"type\":\"uint32\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"idCommitment\",\"type\":\"uint256\"}],\"name\":\"isValidCommitment\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"userMessageLimit\",\"type\":\"uint32\"}],\"name\":\"isValidUserMessageLimit\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"idCommitment\",\"type\":\"uint256\"}],\"name\":\"memberExists\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"memberInfo\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"userMessageLimit\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"index\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint40\",\"name\":\"index\",\"type\":\"uint40\"}],\"name\":\"merkleProofElements\",\"outputs\":[{\"internalType\":\"uint256[20]\",\"name\":\"\",\"type\":\"uint256[20]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"idCommitment\",\"type\":\"uint256\"},{\"internalType\":\"uint32\",\"name\":\"userMessageLimit\",\"type\":\"uint32\"}],\"name\":\"register\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"root\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
+	ABI: "[{\"type\":\"constructor\",\"inputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"DEPTH\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint8\",\"internalType\":\"uint8\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"MAX_MESSAGE_LIMIT\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint32\",\"internalType\":\"uint32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"Q\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"SET_SIZE\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint32\",\"internalType\":\"uint32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"commitmentIndex\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint32\",\"internalType\":\"uint32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"deployedBlockNumber\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint32\",\"internalType\":\"uint32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getCommitments\",\"inputs\":[{\"name\":\"startIndex\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"endIndex\",\"type\":\"uint32\",\"internalType\":\"uint32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"idCommitmentToMetadata\",\"inputs\":[{\"name\":\"idCommitment\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"imtData\",\"inputs\":[],\"outputs\":[{\"name\":\"maxIndex\",\"type\":\"uint40\",\"internalType\":\"uint40\"},{\"name\":\"numberOfLeaves\",\"type\":\"uint40\",\"internalType\":\"uint40\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"initialize\",\"inputs\":[{\"name\":\"maxMessageLimit\",\"type\":\"uint32\",\"internalType\":\"uint32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"isValidCommitment\",\"inputs\":[{\"name\":\"idCommitment\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"pure\"},{\"type\":\"function\",\"name\":\"isValidUserMessageLimit\",\"inputs\":[{\"name\":\"userMessageLimit\",\"type\":\"uint32\",\"internalType\":\"uint32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"memberExists\",\"inputs\":[{\"name\":\"idCommitment\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"memberInfo\",\"inputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"userMessageLimit\",\"type\":\"uint32\",\"internalType\":\"uint32\"},{\"name\":\"index\",\"type\":\"uint32\",\"internalType\":\"uint32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"merkleProofElements\",\"inputs\":[{\"name\":\"index\",\"type\":\"uint40\",\"internalType\":\"uint40\"}],\"outputs\":[{\"name\":\"\",\"type\":\"uint256[20]\",\"internalType\":\"uint256[20]\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"owner\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"address\",\"internalType\":\"address\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"proxiableUUID\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"register\",\"inputs\":[{\"name\":\"idCommitment\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"userMessageLimit\",\"type\":\"uint32\",\"internalType\":\"uint32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"renounceOwnership\",\"inputs\":[],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"root\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"transferOwnership\",\"inputs\":[{\"name\":\"newOwner\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"upgradeTo\",\"inputs\":[{\"name\":\"newImplementation\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"upgradeToAndCall\",\"inputs\":[{\"name\":\"newImplementation\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"data\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[],\"stateMutability\":\"payable\"},{\"type\":\"event\",\"name\":\"AdminChanged\",\"inputs\":[{\"name\":\"previousAdmin\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"},{\"name\":\"newAdmin\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"BeaconUpgraded\",\"inputs\":[{\"name\":\"beacon\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Initialized\",\"inputs\":[{\"name\":\"version\",\"type\":\"uint8\",\"indexed\":false,\"internalType\":\"uint8\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"MemberRegistered\",\"inputs\":[{\"name\":\"rateCommitment\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"index\",\"type\":\"uint32\",\"indexed\":false,\"internalType\":\"uint32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OwnershipTransferred\",\"inputs\":[{\"name\":\"previousOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"newOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Upgraded\",\"inputs\":[{\"name\":\"implementation\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"DuplicateIdCommitment\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"FullTree\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidIdCommitment\",\"inputs\":[{\"name\":\"idCommitment\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"InvalidPaginationQuery\",\"inputs\":[{\"name\":\"startIndex\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"endIndex\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"InvalidUserMessageLimit\",\"inputs\":[{\"name\":\"messageLimit\",\"type\":\"uint32\",\"internalType\":\"uint32\"}]}]",
 }
 
 // ContractABI is the input ABI used to generate the binding from.
@@ -304,35 +304,35 @@ func (_Contract *ContractCallerSession) SETSIZE() (uint32, error) {
 	return _Contract.Contract.SETSIZE(&_Contract.CallOpts)
 }
 
-// UPGRADEINTERFACEVERSION is a free data retrieval call binding the contract method 0xad3cb1cc.
+// CommitmentIndex is a free data retrieval call binding the contract method 0x037a791a.
 //
-// Solidity: function UPGRADE_INTERFACE_VERSION() view returns(string)
-func (_Contract *ContractCaller) UPGRADEINTERFACEVERSION(opts *bind.CallOpts) (string, error) {
+// Solidity: function commitmentIndex() view returns(uint32)
+func (_Contract *ContractCaller) CommitmentIndex(opts *bind.CallOpts) (uint32, error) {
 	var out []interface{}
-	err := _Contract.contract.Call(opts, &out, "UPGRADE_INTERFACE_VERSION")
+	err := _Contract.contract.Call(opts, &out, "commitmentIndex")
 
 	if err != nil {
-		return *new(string), err
+		return *new(uint32), err
 	}
 
-	out0 := *abi.ConvertType(out[0], new(string)).(*string)
+	out0 := *abi.ConvertType(out[0], new(uint32)).(*uint32)
 
 	return out0, err
 
 }
 
-// UPGRADEINTERFACEVERSION is a free data retrieval call binding the contract method 0xad3cb1cc.
+// CommitmentIndex is a free data retrieval call binding the contract method 0x037a791a.
 //
-// Solidity: function UPGRADE_INTERFACE_VERSION() view returns(string)
-func (_Contract *ContractSession) UPGRADEINTERFACEVERSION() (string, error) {
-	return _Contract.Contract.UPGRADEINTERFACEVERSION(&_Contract.CallOpts)
+// Solidity: function commitmentIndex() view returns(uint32)
+func (_Contract *ContractSession) CommitmentIndex() (uint32, error) {
+	return _Contract.Contract.CommitmentIndex(&_Contract.CallOpts)
 }
 
-// UPGRADEINTERFACEVERSION is a free data retrieval call binding the contract method 0xad3cb1cc.
+// CommitmentIndex is a free data retrieval call binding the contract method 0x037a791a.
 //
-// Solidity: function UPGRADE_INTERFACE_VERSION() view returns(string)
-func (_Contract *ContractCallerSession) UPGRADEINTERFACEVERSION() (string, error) {
-	return _Contract.Contract.UPGRADEINTERFACEVERSION(&_Contract.CallOpts)
+// Solidity: function commitmentIndex() view returns(uint32)
+func (_Contract *ContractCallerSession) CommitmentIndex() (uint32, error) {
+	return _Contract.Contract.CommitmentIndex(&_Contract.CallOpts)
 }
 
 // DeployedBlockNumber is a free data retrieval call binding the contract method 0x4add651e.
@@ -395,37 +395,6 @@ func (_Contract *ContractSession) GetCommitments(startIndex uint32, endIndex uin
 // Solidity: function getCommitments(uint32 startIndex, uint32 endIndex) view returns(uint256[])
 func (_Contract *ContractCallerSession) GetCommitments(startIndex uint32, endIndex uint32) ([]*big.Int, error) {
 	return _Contract.Contract.GetCommitments(&_Contract.CallOpts, startIndex, endIndex)
-}
-
-// IdCommitmentIndex is a free data retrieval call binding the contract method 0xae74552a.
-//
-// Solidity: function idCommitmentIndex() view returns(uint32)
-func (_Contract *ContractCaller) IdCommitmentIndex(opts *bind.CallOpts) (uint32, error) {
-	var out []interface{}
-	err := _Contract.contract.Call(opts, &out, "idCommitmentIndex")
-
-	if err != nil {
-		return *new(uint32), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(uint32)).(*uint32)
-
-	return out0, err
-
-}
-
-// IdCommitmentIndex is a free data retrieval call binding the contract method 0xae74552a.
-//
-// Solidity: function idCommitmentIndex() view returns(uint32)
-func (_Contract *ContractSession) IdCommitmentIndex() (uint32, error) {
-	return _Contract.Contract.IdCommitmentIndex(&_Contract.CallOpts)
-}
-
-// IdCommitmentIndex is a free data retrieval call binding the contract method 0xae74552a.
-//
-// Solidity: function idCommitmentIndex() view returns(uint32)
-func (_Contract *ContractCallerSession) IdCommitmentIndex() (uint32, error) {
-	return _Contract.Contract.IdCommitmentIndex(&_Contract.CallOpts)
 }
 
 // IdCommitmentToMetadata is a free data retrieval call binding the contract method 0x9ac21345.
@@ -768,25 +737,25 @@ func (_Contract *ContractCallerSession) Root() (*big.Int, error) {
 	return _Contract.Contract.Root(&_Contract.CallOpts)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0xc5e4c9f9.
+// Initialize is a paid mutator transaction binding the contract method 0x8d8965bd.
 //
-// Solidity: function initialize(address initialOwner, uint32 maxMessageLimit) returns()
-func (_Contract *ContractTransactor) Initialize(opts *bind.TransactOpts, initialOwner common.Address, maxMessageLimit uint32) (*types.Transaction, error) {
-	return _Contract.contract.Transact(opts, "initialize", initialOwner, maxMessageLimit)
+// Solidity: function initialize(uint32 maxMessageLimit) returns()
+func (_Contract *ContractTransactor) Initialize(opts *bind.TransactOpts, maxMessageLimit uint32) (*types.Transaction, error) {
+	return _Contract.contract.Transact(opts, "initialize", maxMessageLimit)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0xc5e4c9f9.
+// Initialize is a paid mutator transaction binding the contract method 0x8d8965bd.
 //
-// Solidity: function initialize(address initialOwner, uint32 maxMessageLimit) returns()
-func (_Contract *ContractSession) Initialize(initialOwner common.Address, maxMessageLimit uint32) (*types.Transaction, error) {
-	return _Contract.Contract.Initialize(&_Contract.TransactOpts, initialOwner, maxMessageLimit)
+// Solidity: function initialize(uint32 maxMessageLimit) returns()
+func (_Contract *ContractSession) Initialize(maxMessageLimit uint32) (*types.Transaction, error) {
+	return _Contract.Contract.Initialize(&_Contract.TransactOpts, maxMessageLimit)
 }
 
-// Initialize is a paid mutator transaction binding the contract method 0xc5e4c9f9.
+// Initialize is a paid mutator transaction binding the contract method 0x8d8965bd.
 //
-// Solidity: function initialize(address initialOwner, uint32 maxMessageLimit) returns()
-func (_Contract *ContractTransactorSession) Initialize(initialOwner common.Address, maxMessageLimit uint32) (*types.Transaction, error) {
-	return _Contract.Contract.Initialize(&_Contract.TransactOpts, initialOwner, maxMessageLimit)
+// Solidity: function initialize(uint32 maxMessageLimit) returns()
+func (_Contract *ContractTransactorSession) Initialize(maxMessageLimit uint32) (*types.Transaction, error) {
+	return _Contract.Contract.Initialize(&_Contract.TransactOpts, maxMessageLimit)
 }
 
 // Register is a paid mutator transaction binding the contract method 0xaf7b4210.
@@ -852,6 +821,27 @@ func (_Contract *ContractTransactorSession) TransferOwnership(newOwner common.Ad
 	return _Contract.Contract.TransferOwnership(&_Contract.TransactOpts, newOwner)
 }
 
+// UpgradeTo is a paid mutator transaction binding the contract method 0x3659cfe6.
+//
+// Solidity: function upgradeTo(address newImplementation) returns()
+func (_Contract *ContractTransactor) UpgradeTo(opts *bind.TransactOpts, newImplementation common.Address) (*types.Transaction, error) {
+	return _Contract.contract.Transact(opts, "upgradeTo", newImplementation)
+}
+
+// UpgradeTo is a paid mutator transaction binding the contract method 0x3659cfe6.
+//
+// Solidity: function upgradeTo(address newImplementation) returns()
+func (_Contract *ContractSession) UpgradeTo(newImplementation common.Address) (*types.Transaction, error) {
+	return _Contract.Contract.UpgradeTo(&_Contract.TransactOpts, newImplementation)
+}
+
+// UpgradeTo is a paid mutator transaction binding the contract method 0x3659cfe6.
+//
+// Solidity: function upgradeTo(address newImplementation) returns()
+func (_Contract *ContractTransactorSession) UpgradeTo(newImplementation common.Address) (*types.Transaction, error) {
+	return _Contract.Contract.UpgradeTo(&_Contract.TransactOpts, newImplementation)
+}
+
 // UpgradeToAndCall is a paid mutator transaction binding the contract method 0x4f1ef286.
 //
 // Solidity: function upgradeToAndCall(address newImplementation, bytes data) payable returns()
@@ -871,6 +861,285 @@ func (_Contract *ContractSession) UpgradeToAndCall(newImplementation common.Addr
 // Solidity: function upgradeToAndCall(address newImplementation, bytes data) payable returns()
 func (_Contract *ContractTransactorSession) UpgradeToAndCall(newImplementation common.Address, data []byte) (*types.Transaction, error) {
 	return _Contract.Contract.UpgradeToAndCall(&_Contract.TransactOpts, newImplementation, data)
+}
+
+// ContractAdminChangedIterator is returned from FilterAdminChanged and is used to iterate over the raw logs and unpacked data for AdminChanged events raised by the Contract contract.
+type ContractAdminChangedIterator struct {
+	Event *ContractAdminChanged // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ContractAdminChangedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ContractAdminChanged)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ContractAdminChanged)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ContractAdminChangedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ContractAdminChangedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ContractAdminChanged represents a AdminChanged event raised by the Contract contract.
+type ContractAdminChanged struct {
+	PreviousAdmin common.Address
+	NewAdmin      common.Address
+	Raw           types.Log // Blockchain specific contextual infos
+}
+
+// FilterAdminChanged is a free log retrieval operation binding the contract event 0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f.
+//
+// Solidity: event AdminChanged(address previousAdmin, address newAdmin)
+func (_Contract *ContractFilterer) FilterAdminChanged(opts *bind.FilterOpts) (*ContractAdminChangedIterator, error) {
+
+	logs, sub, err := _Contract.contract.FilterLogs(opts, "AdminChanged")
+	if err != nil {
+		return nil, err
+	}
+	return &ContractAdminChangedIterator{contract: _Contract.contract, event: "AdminChanged", logs: logs, sub: sub}, nil
+}
+
+// WatchAdminChanged is a free log subscription operation binding the contract event 0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f.
+//
+// Solidity: event AdminChanged(address previousAdmin, address newAdmin)
+func (_Contract *ContractFilterer) WatchAdminChanged(opts *bind.WatchOpts, sink chan<- *ContractAdminChanged) (event.Subscription, error) {
+
+	logs, sub, err := _Contract.contract.WatchLogs(opts, "AdminChanged")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ContractAdminChanged)
+				if err := _Contract.contract.UnpackLog(event, "AdminChanged", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseAdminChanged is a log parse operation binding the contract event 0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f.
+//
+// Solidity: event AdminChanged(address previousAdmin, address newAdmin)
+func (_Contract *ContractFilterer) ParseAdminChanged(log types.Log) (*ContractAdminChanged, error) {
+	event := new(ContractAdminChanged)
+	if err := _Contract.contract.UnpackLog(event, "AdminChanged", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// ContractBeaconUpgradedIterator is returned from FilterBeaconUpgraded and is used to iterate over the raw logs and unpacked data for BeaconUpgraded events raised by the Contract contract.
+type ContractBeaconUpgradedIterator struct {
+	Event *ContractBeaconUpgraded // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ContractBeaconUpgradedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ContractBeaconUpgraded)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ContractBeaconUpgraded)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ContractBeaconUpgradedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ContractBeaconUpgradedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ContractBeaconUpgraded represents a BeaconUpgraded event raised by the Contract contract.
+type ContractBeaconUpgraded struct {
+	Beacon common.Address
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterBeaconUpgraded is a free log retrieval operation binding the contract event 0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e.
+//
+// Solidity: event BeaconUpgraded(address indexed beacon)
+func (_Contract *ContractFilterer) FilterBeaconUpgraded(opts *bind.FilterOpts, beacon []common.Address) (*ContractBeaconUpgradedIterator, error) {
+
+	var beaconRule []interface{}
+	for _, beaconItem := range beacon {
+		beaconRule = append(beaconRule, beaconItem)
+	}
+
+	logs, sub, err := _Contract.contract.FilterLogs(opts, "BeaconUpgraded", beaconRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ContractBeaconUpgradedIterator{contract: _Contract.contract, event: "BeaconUpgraded", logs: logs, sub: sub}, nil
+}
+
+// WatchBeaconUpgraded is a free log subscription operation binding the contract event 0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e.
+//
+// Solidity: event BeaconUpgraded(address indexed beacon)
+func (_Contract *ContractFilterer) WatchBeaconUpgraded(opts *bind.WatchOpts, sink chan<- *ContractBeaconUpgraded, beacon []common.Address) (event.Subscription, error) {
+
+	var beaconRule []interface{}
+	for _, beaconItem := range beacon {
+		beaconRule = append(beaconRule, beaconItem)
+	}
+
+	logs, sub, err := _Contract.contract.WatchLogs(opts, "BeaconUpgraded", beaconRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ContractBeaconUpgraded)
+				if err := _Contract.contract.UnpackLog(event, "BeaconUpgraded", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseBeaconUpgraded is a log parse operation binding the contract event 0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e.
+//
+// Solidity: event BeaconUpgraded(address indexed beacon)
+func (_Contract *ContractFilterer) ParseBeaconUpgraded(log types.Log) (*ContractBeaconUpgraded, error) {
+	event := new(ContractBeaconUpgraded)
+	if err := _Contract.contract.UnpackLog(event, "BeaconUpgraded", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
 }
 
 // ContractInitializedIterator is returned from FilterInitialized and is used to iterate over the raw logs and unpacked data for Initialized events raised by the Contract contract.
@@ -942,13 +1211,13 @@ func (it *ContractInitializedIterator) Close() error {
 
 // ContractInitialized represents a Initialized event raised by the Contract contract.
 type ContractInitialized struct {
-	Version uint64
+	Version uint8
 	Raw     types.Log // Blockchain specific contextual infos
 }
 
-// FilterInitialized is a free log retrieval operation binding the contract event 0xc7f505b2f371ae2175ee4913f4499e1f2633a7b5936321eed1cdaeb6115181d2.
+// FilterInitialized is a free log retrieval operation binding the contract event 0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498.
 //
-// Solidity: event Initialized(uint64 version)
+// Solidity: event Initialized(uint8 version)
 func (_Contract *ContractFilterer) FilterInitialized(opts *bind.FilterOpts) (*ContractInitializedIterator, error) {
 
 	logs, sub, err := _Contract.contract.FilterLogs(opts, "Initialized")
@@ -958,9 +1227,9 @@ func (_Contract *ContractFilterer) FilterInitialized(opts *bind.FilterOpts) (*Co
 	return &ContractInitializedIterator{contract: _Contract.contract, event: "Initialized", logs: logs, sub: sub}, nil
 }
 
-// WatchInitialized is a free log subscription operation binding the contract event 0xc7f505b2f371ae2175ee4913f4499e1f2633a7b5936321eed1cdaeb6115181d2.
+// WatchInitialized is a free log subscription operation binding the contract event 0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498.
 //
-// Solidity: event Initialized(uint64 version)
+// Solidity: event Initialized(uint8 version)
 func (_Contract *ContractFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *ContractInitialized) (event.Subscription, error) {
 
 	logs, sub, err := _Contract.contract.WatchLogs(opts, "Initialized")
@@ -995,9 +1264,9 @@ func (_Contract *ContractFilterer) WatchInitialized(opts *bind.WatchOpts, sink c
 	}), nil
 }
 
-// ParseInitialized is a log parse operation binding the contract event 0xc7f505b2f371ae2175ee4913f4499e1f2633a7b5936321eed1cdaeb6115181d2.
+// ParseInitialized is a log parse operation binding the contract event 0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498.
 //
-// Solidity: event Initialized(uint64 version)
+// Solidity: event Initialized(uint8 version)
 func (_Contract *ContractFilterer) ParseInitialized(log types.Log) (*ContractInitialized, error) {
 	event := new(ContractInitialized)
 	if err := _Contract.contract.UnpackLog(event, "Initialized", log); err != nil {
@@ -1076,15 +1345,14 @@ func (it *ContractMemberRegisteredIterator) Close() error {
 
 // ContractMemberRegistered represents a MemberRegistered event raised by the Contract contract.
 type ContractMemberRegistered struct {
-	IdCommitment     *big.Int
-	UserMessageLimit uint32
-	Index            uint32
-	Raw              types.Log // Blockchain specific contextual infos
+	RateCommitment *big.Int
+	Index          uint32
+	Raw            types.Log // Blockchain specific contextual infos
 }
 
-// FilterMemberRegistered is a free log retrieval operation binding the contract event 0x51ddaace4c9a58c725a5debea8eb4f4afc5085bd6c14c45c97e728d8f54c16df.
+// FilterMemberRegistered is a free log retrieval operation binding the contract event 0xb84da12e8207adb5ee3e5686338302ffe6634fbb95a9fd52f8a466ea2010152d.
 //
-// Solidity: event MemberRegistered(uint256 idCommitment, uint32 userMessageLimit, uint32 index)
+// Solidity: event MemberRegistered(uint256 rateCommitment, uint32 index)
 func (_Contract *ContractFilterer) FilterMemberRegistered(opts *bind.FilterOpts) (*ContractMemberRegisteredIterator, error) {
 
 	logs, sub, err := _Contract.contract.FilterLogs(opts, "MemberRegistered")
@@ -1094,9 +1362,9 @@ func (_Contract *ContractFilterer) FilterMemberRegistered(opts *bind.FilterOpts)
 	return &ContractMemberRegisteredIterator{contract: _Contract.contract, event: "MemberRegistered", logs: logs, sub: sub}, nil
 }
 
-// WatchMemberRegistered is a free log subscription operation binding the contract event 0x51ddaace4c9a58c725a5debea8eb4f4afc5085bd6c14c45c97e728d8f54c16df.
+// WatchMemberRegistered is a free log subscription operation binding the contract event 0xb84da12e8207adb5ee3e5686338302ffe6634fbb95a9fd52f8a466ea2010152d.
 //
-// Solidity: event MemberRegistered(uint256 idCommitment, uint32 userMessageLimit, uint32 index)
+// Solidity: event MemberRegistered(uint256 rateCommitment, uint32 index)
 func (_Contract *ContractFilterer) WatchMemberRegistered(opts *bind.WatchOpts, sink chan<- *ContractMemberRegistered) (event.Subscription, error) {
 
 	logs, sub, err := _Contract.contract.WatchLogs(opts, "MemberRegistered")
@@ -1131,9 +1399,9 @@ func (_Contract *ContractFilterer) WatchMemberRegistered(opts *bind.WatchOpts, s
 	}), nil
 }
 
-// ParseMemberRegistered is a log parse operation binding the contract event 0x51ddaace4c9a58c725a5debea8eb4f4afc5085bd6c14c45c97e728d8f54c16df.
+// ParseMemberRegistered is a log parse operation binding the contract event 0xb84da12e8207adb5ee3e5686338302ffe6634fbb95a9fd52f8a466ea2010152d.
 //
-// Solidity: event MemberRegistered(uint256 idCommitment, uint32 userMessageLimit, uint32 index)
+// Solidity: event MemberRegistered(uint256 rateCommitment, uint32 index)
 func (_Contract *ContractFilterer) ParseMemberRegistered(log types.Log) (*ContractMemberRegistered, error) {
 	event := new(ContractMemberRegistered)
 	if err := _Contract.contract.UnpackLog(event, "MemberRegistered", log); err != nil {

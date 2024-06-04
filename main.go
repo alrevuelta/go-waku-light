@@ -455,7 +455,7 @@ func Listen(cfg *Config) error {
 		return errors.Wrap(err, "error when fetching root")
 	}
 
-	numLeafs, err := cfg.contract.IdCommitmentIndex(callOpts)
+	numLeafs, err := cfg.contract.CommitmentIndex(callOpts)
 	if err != nil {
 		return errors.Wrap(err, "error when fetching num leafs")
 	}
@@ -485,13 +485,13 @@ func Listen(cfg *Config) error {
 			if err != nil {
 				return errors.Wrap(err, "error when fetching root")
 			}
-			numLeafs, err := cfg.contract.IdCommitmentIndex(callOpts)
+			numLeafs, err := cfg.contract.CommitmentIndex(callOpts)
 			if err != nil {
 				return errors.Wrap(err, "error when fetching num leafs")
 			}
 			log.WithFields(log.Fields{
 				"Block":         vLog.Raw.BlockNumber,
-				"NewCommitment": vLog.IdCommitment,
+				"NewCommitment": vLog.RateCommitment,
 				"NewRoot":       onchainRoot,
 				"NewNumLeafs":   numLeafs,
 			}).Info("New registration detected")
@@ -507,7 +507,7 @@ func OnchainRoot(cfg *Config) error {
 		return errors.Wrap(err, "error when fetching root")
 	}
 
-	numLeafs, err := cfg.contract.IdCommitmentIndex(callOpts)
+	numLeafs, err := cfg.contract.CommitmentIndex(callOpts)
 	if err != nil {
 		return errors.Wrap(err, "error when fetching num leafs")
 	}
@@ -809,7 +809,7 @@ func SyncTree(cfg *Config, chunkSize uint64) (*rln.RLN, error) {
 
 	callOpts := &bind.CallOpts{Context: context.Background(), Pending: false}
 
-	numLeafs, err := cfg.contract.IdCommitmentIndex(callOpts)
+	numLeafs, err := cfg.contract.CommitmentIndex(callOpts)
 	if err != nil {
 		return nil, errors.Wrap(err, "error when fetching num leafs")
 	}
