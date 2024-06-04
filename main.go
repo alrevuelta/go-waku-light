@@ -38,8 +38,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const UserMessageLimit = 10
-
 type Config struct {
 	client   *ethclient.Client
 	contract *contract.Contract
@@ -60,9 +58,10 @@ func main() {
 	var lightpushPeer string
 	var ethEndpoint string
 	var contractAddress string
+	var userMessageLimit uint64
 
 	// Examples of usage:
-	// ./go-waku-light register --priv-key=REPLACE_YOUR_PRIV_KEY
+	// ./go-waku-light register --priv-key=REPLACE_YOUR_PRIV_KEY --user-message-limit=5
 	// ./go-waku-light listen
 
 	// Fetched direcly from the contract
@@ -106,6 +105,11 @@ func main() {
 						Destination: &privKey,
 						Required:    true,
 					},
+					&cli.Uint64Flag{
+						Name:        "user-message-limit",
+						Value:       5,
+						Destination: &userMessageLimit,
+					},
 				},
 				Name: "register",
 				Action: func(cCtx *cli.Context) error {
@@ -113,7 +117,7 @@ func main() {
 					if err != nil {
 						return errors.Wrap(err, "error when creating config")
 					}
-					err = Register(cfg, privKey, amountRegister)
+					err = Register(cfg, privKey, amountRegister, uint32(userMessageLimit))
 					return err
 				},
 			},
@@ -369,8 +373,9 @@ func CreateConfig(endpoint string, contractAddress string) (*Config, error) {
 // Register a new membership into the rln contract, and stores its in a json file. Note that the json
 // is not a keystore, but just a custom serialized struct. Registering requires providing a valid
 // account with enough funds.
-func Register(cfg *Config, privKey string, amount int) error {
+func Register(cfg *Config, privKey string, amount int, userMessageLimit uint32) error {
 	log.Info("Registering ", amount, " memberships")
+	log.Info("User message limit: ", userMessageLimit)
 	rlnInstance, err := rln.NewRLN()
 	if err != nil {
 		return errors.Wrap(err, "error when creating RLN instance")
@@ -424,12 +429,12 @@ func Register(cfg *Config, privKey string, amount int) error {
 		mBig := rln.Bytes32ToBigInt(m.IDCommitment)
 
 		// Create a tx calling the update rewards root function with the new merkle root
-		tx, err := cfg.contract.Register(auth, mBig, UserMessageLimit)
+		tx, err := cfg.contract.Register(auth, mBig, userMessageLimit)
 		if err != nil {
 			return errors.Wrap(err, "error when sending tx")
 		}
 
-		log.Info("Tx sent. Nonce: ", auth.Nonce, " Commitment: ", mBig, " UserMessageLimit: ", UserMessageLimit, " TxHash: ", tx.Hash().Hex())
+		log.Info("Tx sent. Nonce: ", auth.Nonce, " Commitment: ", mBig, " UserMessageLimit: ", userMessageLimit, " TxHash: ", tx.Hash().Hex())
 
 		rankingsJson, err := json.Marshal(m)
 		if err != nil {
@@ -715,7 +720,7 @@ func OnchainGenerateRlnProof(
 	messageId := uint32(10)
 	rlnWitness, err := rlnInstance.CreateWitness(
 		idCred.IDSecretHash,
-		UserMessageLimit,
+		userMessageLimit,
 		messageId,
 		x, // TODO: this is not really x
 		rln.GetCurrentEpoch(),
