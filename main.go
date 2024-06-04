@@ -19,6 +19,7 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"google.golang.org/protobuf/proto"
 
 	// TODO: The go-waku version that shall be imported is a custom one
 	// otherwise there is a problem with go-zerokit since go-waku-light
@@ -28,6 +29,7 @@ import (
 	"github.com/waku-org/go-waku/waku/v2/peerstore"
 	"github.com/waku-org/go-waku/waku/v2/protocol/lightpush"
 	"github.com/waku-org/go-waku/waku/v2/protocol/pb"
+	rlnpb "github.com/waku-org/go-waku/waku/v2/protocol/rln/pb"
 	"github.com/waku-org/go-waku/waku/v2/utils"
 	"github.com/waku-org/go-zerokit-rln/rln"
 
@@ -88,7 +90,7 @@ func main() {
 			},
 			&cli.StringFlag{
 				Name:        "contract-address",
-				Value:       "0x520434D97e5eeD39a1F44C1f41A8024cB6138772",
+				Value:       "0x1ae47AAb605E3639cA88ce8F6183C3035Eb60c62",
 				Destination: &contractAddress,
 			},
 		},
@@ -327,18 +329,19 @@ func main() {
 					if err != nil {
 						return errors.Wrap(err, "error when creating config")
 					}
-					_ = cfg
-					/*
-						err := SendMessage(
-							cfg,
-							membershipFile,
-							message,
-							contentTopic,
-							uint16(clusterId),
-							lightpushPeer,
-							pubsubTopic)
-						return err
-					*/
+
+					err = SendMessage(
+						cfg,
+						membershipFile,
+						message,
+						contentTopic,
+						uint16(clusterId),
+						lightpushPeer,
+						pubsubTopic)
+					if err != nil {
+						return errors.Wrap(err, "error when sending message")
+					}
+
 					return nil
 				},
 			},
@@ -933,7 +936,8 @@ func SendMessage(
 	}
 
 	// TODO: Get current timestamp
-	epoch := rln.ToEpoch(3)
+	//epoch := rln.ToEpoch(3)
+	epoch := rln.GetCurrentEpoch()
 
 	serializedRlnProof, err := serializeRLNProof(rlnProof, epoch, rln.RLN_IDENTIFIER[:])
 	if err != nil {
@@ -1031,24 +1035,20 @@ func serializeRLNProof(proof *rln.RateLimitProof, epoch rln.Epoch, rlnIdentifier
 		  output.write3(7, nsp.rlnIdentifier)
 	*/
 
-	/*
-		test := &rlnpb.RateLimitProof{
-			Proof:         proof.Proof[:],
-			MerkleRoot:    proof.MerkleRoot[:],
-			Epoch:         epoch[:],
-			ShareX:        proof.ShareX[:],
-			ShareY:        proof.ShareY[:],
-			Nullifier:     proof.Nullifier[:],
-			RlnIdentifier: rlnIdentifier[:],
-		}
+	test := &rlnpb.RateLimitProof{
+		Proof:         proof.Proof[:],
+		MerkleRoot:    proof.MerkleRoot[:],
+		Epoch:         epoch[:],
+		ShareX:        proof.ShareX[:],
+		ShareY:        proof.ShareY[:],
+		Nullifier:     proof.Nullifier[:],
+		RlnIdentifier: rlnIdentifier[:], // TODO: This is wrong? I have to modify the protos??. Perhaps it correct.
+	}
 
-		ser, err := proto.Marshal(test)
-		if err != nil {
-			return nil, errors.Wrap(err, "error when marshalling proof")
-		}
+	ser, err := proto.Marshal(test)
+	if err != nil {
+		return nil, errors.Wrap(err, "error when marshalling proof")
+	}
 
-		return ser, nil*/
-
-	remove := make([]byte, 0)
-	return remove, nil
+	return ser, nil
 }
