@@ -376,6 +376,19 @@ func CreateConfig(endpoint string, contractAddress string) (*Config, error) {
 func Register(cfg *Config, privKey string, amount int, userMessageLimit uint32) error {
 	log.Info("Registering ", amount, " memberships")
 	log.Info("User message limit: ", userMessageLimit)
+
+	callOpts := &bind.CallOpts{Context: context.Background(), Pending: false}
+	maxMessageLimit, err := cfg.contract.MAXMESSAGELIMIT(callOpts)
+	if err != nil {
+		return errors.Wrap(err, "error when fetching max message limit")
+	}
+
+	// Ensure we dont attempt to register a user with a message limit higher than the contract allows
+	if userMessageLimit > maxMessageLimit {
+		return errors.New(fmt.Sprintf("user message limit is too high. Requested: %d, Max: %d",
+			userMessageLimit, maxMessageLimit))
+	}
+
 	rlnInstance, err := rln.NewRLN()
 	if err != nil {
 		return errors.Wrap(err, "error when creating RLN instance")
