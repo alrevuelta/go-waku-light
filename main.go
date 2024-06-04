@@ -733,7 +733,9 @@ func OnchainGenerateRlnProof(
 	// https://github.com/waku-org/go-waku/blob/v0.9.0/waku/v2/protocol/rln/common.go#L33-L40
 	x := append([]byte(message), []byte(contentTopic)...)
 
-	messageId := uint32(10)
+	// TODO: This should be configurable or automatic
+	messageId := uint32(0)
+
 	rlnWitness, err := rlnInstance.CreateWitness(
 		idCred.IDSecretHash,
 		userMessageLimit,
