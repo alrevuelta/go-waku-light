@@ -1,17 +1,17 @@
 # go-waku-light
 
-This repo contains a proof of concept for a `waku` light client, integrating [this](https://github.com/vacp2p/rln-contract/pull/38) modification of the RLN contract. It allows to create RLN zk-proofs without having to synchronize the membership Merkle tree. It achieves so by getting the Merkle proof required to generate the zk RLN proof directly from the smart contract, included upstream [here](https://github.com/privacy-scaling-explorations/zk-kit/pull/162).
+This repo contains a proof of concept for a `waku` light client, integrating [RLNv2 + onchain trees](https://github.com/waku-org/waku-rlnv2-contract). It allows to create RLN zk-proofs without having to synchronize the membership Merkle tree. It achieves so by getting the Merkle proof required to generate the zk RLN proof directly from the smart contract, included upstream [here](https://github.com/privacy-scaling-explorations/zk-kit/pull/162).
 
-And end to end integration can be done by creating a new network using [this modified contract](https://cardona-zkevm.polygonscan.com/address/0x520434D97e5eeD39a1F44C1f41A8024cB6138772) deployed in the Polygon zkEVM. We create two nodes.
+And end to end integration can be done by creating a new network using [this modified contract](https://cardona-zkevm.polygonscan.com/address/0x1ae47AAb605E3639cA88ce8F6183C3035Eb60c62) deployed in the Polygon zkEVM. We create two nodes.
 
 `node1`
 ```
-docker run -p 60000:60000 harbor.status.im/wakuorg/nwaku:v0.27.0 --pubsub-topic=/waku/2/rs/100/0 --relay=true --lightpush=true --cluster-id=100 --rln-relay-dynamic=true --rln-relay=true --rln-relay-eth-client-address=https://rpc.cardona.zkevm-rpc.com --rln-relay-eth-contract-address=0x520434D97e5eeD39a1F44C1f41A8024cB6138772 --nodekey=fa900509b7da6211dc91715260dba7431457d51cc1bb0732a58eb84ec812de99 --log-level=DEBUG
+docker run -p 60000:60000 quay.io/wakuorg/nwaku-pr:2770-rln-v2 --pubsub-topic=/waku/2/rs/100/0 --relay=true --lightpush=true --cluster-id=100 --rln-relay-dynamic=true --rln-relay=true --rln-relay-eth-client-address=https://rpc.cardona.zkevm-rpc.com --rln-relay-eth-contract-address=0x1ae47AAb605E3639cA88ce8F6183C3035Eb60c62 --nodekey=fa900509b7da6211dc91715260dba7431457d51cc1bb0732a58eb84ec812de99 --log-level=TRACE
 ```
 
 And `node2`. Note that we use `TRACE` to verify that the message arrived correctly.
 ```
-docker run -p 60001:60001 --network host harbor.status.im/wakuorg/nwaku:v0.27.0 --pubsub-topic=/waku/2/rs/100/0 --relay=true --lightpush=true --cluster-id=100 --rln-relay-dynamic=true --rln-relay=true --rln-relay-eth-client-address=https://rpc.cardona.zkevm-rpc.com --rln-relay-eth-contract-address=0x520434D97e5eeD39a1F44C1f41A8024cB6138772 --log-level=TRACE --staticnode=/ip4/127.0.0.1/tcp/60000/p2p/16Uiu2HAkxTGJRgkCxgMDH4A4QBvw3q462BRkVJaPF5KQWkc1t4cp --ports-shift=1
+docker run -p 60001:60001 --network host quay.io/wakuorg/nwaku-pr:2770-rln-v2 --pubsub-topic=/waku/2/rs/100/0 --relay=true --lightpush=true --cluster-id=100 --rln-relay-dynamic=true --rln-relay=true --rln-relay-eth-client-address=https://rpc.cardona.zkevm-rpc.com --rln-relay-eth-contract-address=0x1ae47AAb605E3639cA88ce8F6183C3035Eb60c62 --log-level=TRACE --staticnode=/ip4/127.0.0.1/tcp/60000/p2p/16Uiu2HAkxTGJRgkCxgMDH4A4QBvw3q462BRkVJaPF5KQWkc1t4cp --ports-shift=1
 ```
 
 A `go-waku-light` client can first register an RLN membership:
@@ -37,10 +37,6 @@ For context, RLN is a decentralized rate-limiting protocol, that allows setting 
 The main motivation is to showcase how [this](https://github.com/vacp2p/rln-contract/pull/31) modification can help light clients become lighter. It makes proof generation and verification easier:
 * Proof verification: Only requires the Merkle root, which is now available on-chain and can be fetched with a simple call. Before, one had to sync the whole Merkle tree with emitted events, and keep a local copy of it.
 * Proof generation: Generating an RLN proof requires the Merkle proof of the leaf generating it. With this modification, said Merkle proof can be obtained directly from the contract.
-
-Notes:
-* Deployed in Polygon Layer 2 zkEVM, [see](https://cardona-zkevm.polygonscan.com/address/0x520434D97e5eeD39a1F44C1f41A8024cB6138772).
-* This repo provides a simple CLI tool to showcase the functionalities.
 
 ## Usage
 
