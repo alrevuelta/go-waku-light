@@ -1,14 +1,13 @@
-FROM golang:1.20-alpine AS build
+FROM golang:1.20 AS build
 
 WORKDIR /app
 
 COPY . .
 
-RUN apk add --update gcc g++
 RUN go mod download
 RUN go build -o /main
 
-FROM golang:1.20-alpine
+FROM golang:1.20
 
 WORKDIR /
 
