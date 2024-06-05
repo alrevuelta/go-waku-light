@@ -14,18 +14,22 @@ And `node2`. Note that we use `TRACE` to verify that the message arrived correct
 docker run -p 60001:60001 --network host quay.io/wakuorg/nwaku-pr:2770-rln-v2 --pubsub-topic=/waku/2/rs/100/0 --relay=true --lightpush=true --cluster-id=100 --rln-relay-dynamic=true --rln-relay=true --rln-relay-eth-client-address=https://rpc.cardona.zkevm-rpc.com --rln-relay-eth-contract-address=0x1ae47AAb605E3639cA88ce8F6183C3035Eb60c62 --log-level=TRACE --staticnode=/ip4/127.0.0.1/tcp/60000/p2p/16Uiu2HAkxTGJRgkCxgMDH4A4QBvw3q462BRkVJaPF5KQWkc1t4cp --ports-shift=1
 ```
 
-A `go-waku-light` client can first register an RLN membership:
-```
-./main register --priv-key=REPLACE_YOUR_PRIV_KEY
-```
-
-And then send a message with an RLN proof to the network via light push. Note that under the hood `node1` is used as lightpush.
+A `go-waku-light` can run as follows. It publishes a message every `message-every-secs` being stateless, generating RLN proofs using the Merkle Proofs provided by the contract.
+The membership is automatically registered at startup, providing a valid `priv-key`.
 
 ```
-./main send-message --membership-file=membership_xxx.json --message="light client sending a rln message"
+./go-waku-light send-messages-loop \
+--priv-key=SOME_PRIV_KEY \
+--user-message-limit=5 \
+--message="light client sending a rln message" \
+--content-topic=/basic2/1/test/proto \
+--pubsub-topic=/waku/2/rs/100/0 \
+--cluster-id=100 \
+--lightpush-peer=/ip4/127.0.0.1/tcp/60000/p2p/16Uiu2HAkxTGJRgkCxgMDH4A4QBvw3q462BRkVJaPF5KQWkc1t4cp \
+--message-every-secs=5
 ```
 
-Like this, a light client can generate valid RLN proofs without having to track the state of the membership tree.
+See docs for other commands, useful for debugging.
 
 ## Explanation
 * Faster sync time. Uses `GetCommitments` instead of fetching events.
