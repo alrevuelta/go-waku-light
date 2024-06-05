@@ -61,6 +61,7 @@ func main() {
 	var ethEndpoint string
 	var contractAddress string
 	var userMessageLimit uint64
+	var messageEverySecs uint64
 
 	// Examples of usage:
 	// ./go-waku-light register --priv-key=REPLACE_YOUR_PRIV_KEY --user-message-limit=5
@@ -81,6 +82,17 @@ func main() {
 
 	// Publish message via lightpush
 	// ./go-waku-light send-message --membership-file=membership_xxx.json --message="light client sending a rln message"
+
+	// Publish multiple messages in an infinite loop registering also the membership
+	// ./go-waku-light send-messages-loop \
+	// --priv-key=SOME_PRIV_KEY \
+	// --user-message-limit=5 \
+	// --message="light client sending a rln message" \
+	// --content-topic=/basic2/1/test/proto \
+	// --pubsub-topic=/waku/2/rs/100/0 \
+	// --cluster-id=100 \
+	// --lightpush-peer=/ip4/127.0.0.1/tcp/60000/p2p/16Uiu2HAkxTGJRgkCxgMDH4A4QBvw3q462BRkVJaPF5KQWkc1t4cp \
+	// --message-every-secs=5
 	app := &cli.App{
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -119,7 +131,7 @@ func main() {
 					if err != nil {
 						return errors.Wrap(err, "error when creating config")
 					}
-					err = Register(cfg, privKey, amountRegister, uint32(userMessageLimit))
+					_, err = Register(cfg, privKey, amountRegister, uint32(userMessageLimit))
 					return err
 				},
 			},
@@ -228,7 +240,8 @@ func main() {
 					if err != nil {
 						return errors.Wrap(err, "error when creating config")
 					}
-					_, _, err = OnchainGenerateRlnProof(cfg, membershipFile, message, contentTopic)
+					messageId := uint32(0)
+					_, _, err = OnchainGenerateRlnProof(cfg, membershipFile, message, contentTopic, messageId)
 					return err
 				},
 			},
@@ -330,6 +343,8 @@ func main() {
 						return errors.Wrap(err, "error when creating config")
 					}
 
+					msgId := uint32(0)
+
 					err = SendMessage(
 						cfg,
 						membershipFile,
@@ -337,13 +352,99 @@ func main() {
 						contentTopic,
 						uint16(clusterId),
 						lightpushPeer,
-						pubsubTopic)
+						pubsubTopic,
+						msgId)
 
 					if err != nil {
 						return errors.Wrap(err, "error when sending message")
 					}
 
 					return nil
+				},
+			},
+			{
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "priv-key",
+						Destination: &privKey,
+						Required:    true,
+					},
+					&cli.Uint64Flag{
+						Name:        "user-message-limit",
+						Value:       5,
+						Destination: &userMessageLimit,
+					},
+					&cli.StringFlag{
+						Name:        "message",
+						Destination: &message,
+					},
+					&cli.StringFlag{
+						Name:        "content-topic",
+						Destination: &contentTopic,
+						Value:       "/basic2/1/test/proto",
+					},
+					&cli.StringFlag{
+						Name:        "pubsub-topic",
+						Destination: &pubsubTopic,
+						Value:       "/waku/2/rs/100/0",
+					},
+					&cli.IntFlag{
+						Name:        "cluster-id",
+						Destination: &clusterId,
+						Value:       100,
+					},
+					&cli.StringFlag{
+						Name:        "lightpush-peer",
+						Destination: &lightpushPeer,
+						Value:       "/ip4/127.0.0.1/tcp/60000/p2p/16Uiu2HAkxTGJRgkCxgMDH4A4QBvw3q462BRkVJaPF5KQWkc1t4cp",
+					},
+					&cli.Uint64Flag{
+						Name:        "message-every-secs",
+						Value:       10,
+						Destination: &messageEverySecs,
+					},
+				},
+				Name: "send-messages-loop",
+				Action: func(cCtx *cli.Context) error {
+					cfg, err := CreateConfig(ethEndpoint, contractAddress)
+					if err != nil {
+						return errors.Wrap(err, "error when creating config")
+					}
+
+					membershipFiles, err := Register(cfg, privKey, 1, uint32(userMessageLimit))
+					if err != nil {
+						return errors.Wrap(err, "error when registering memberships")
+					}
+
+					log.Info("Membership registered: ", membershipFiles)
+
+					msgId := uint32(0)
+					for {
+						messageToSend := fmt.Sprintf("%s: %d", message, msgId)
+
+						// TODO: Optimize this. A new waku light client
+						// is created on every iteration. This is not optimal.
+						// Also the file is opened and read on every iteration.
+						// Etc.
+						err = SendMessage(
+							cfg,
+							membershipFiles[0],
+							messageToSend,
+							contentTopic,
+							uint16(clusterId),
+							lightpushPeer,
+							pubsubTopic,
+							msgId)
+
+						if err != nil {
+							return errors.Wrap(err, "error when sending message")
+						}
+
+						msgId++
+
+						log.Info("Message sent: ", messageToSend, " sleeping ", messageEverySecs, " seconds...")
+						time.Sleep(time.Duration(messageEverySecs) * time.Second)
+					}
 				},
 			},
 		},
@@ -377,36 +478,38 @@ func CreateConfig(endpoint string, contractAddress string) (*Config, error) {
 // Register a new membership into the rln contract, and stores its in a json file. Note that the json
 // is not a keystore, but just a custom serialized struct. Registering requires providing a valid
 // account with enough funds.
-func Register(cfg *Config, privKey string, amount int, userMessageLimit uint32) error {
+func Register(cfg *Config, privKey string, amount int, userMessageLimit uint32) ([]string, error) {
 	log.Info("Registering ", amount, " memberships")
 	log.Info("User message limit: ", userMessageLimit)
+
+	filesNames := make([]string, 0)
 
 	callOpts := &bind.CallOpts{Context: context.Background(), Pending: false}
 	maxMessageLimit, err := cfg.contract.MAXMESSAGELIMIT(callOpts)
 	if err != nil {
-		return errors.Wrap(err, "error when fetching max message limit")
+		return filesNames, errors.Wrap(err, "error when fetching max message limit")
 	}
 
 	// Ensure we dont attempt to register a user with a message limit higher than the contract allows
 	if userMessageLimit > maxMessageLimit {
-		return errors.New(fmt.Sprintf("user message limit is too high. Requested: %d, Max: %d",
+		return filesNames, errors.New(fmt.Sprintf("user message limit is too high. Requested: %d, Max: %d",
 			userMessageLimit, maxMessageLimit))
 	}
 
 	rlnInstance, err := rln.NewRLN()
 	if err != nil {
-		return errors.Wrap(err, "error when creating RLN instance")
+		return filesNames, errors.Wrap(err, "error when creating RLN instance")
 	}
 
 	privateKey, err := crypto.HexToECDSA(privKey)
 	if err != nil {
-		return errors.Wrap(err, "error when converting private key")
+		return filesNames, errors.Wrap(err, "error when converting private key")
 	}
 
 	publicKey := privateKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
-		return errors.New("error casting public key to ECDSA")
+		return filesNames, errors.New("error casting public key to ECDSA")
 	}
 
 	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
@@ -414,17 +517,17 @@ func Register(cfg *Config, privKey string, amount int, userMessageLimit uint32) 
 	log.Info("Preparing tx from address: ", fromAddress.Hex())
 	nonce, err := cfg.client.PendingNonceAt(context.Background(), fromAddress)
 	if err != nil {
-		return errors.Wrap(err, "error when fetching nonce")
+		return filesNames, errors.Wrap(err, "error when fetching nonce")
 	}
 
 	chaindId, err := cfg.client.NetworkID(context.Background())
 	if err != nil {
-		return errors.Wrap(err, "error when fetching chain id")
+		return filesNames, errors.Wrap(err, "error when fetching chain id")
 	}
 
 	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, chaindId)
 	if err != nil {
-		return errors.Wrap(err, "error when creating transactor")
+		return filesNames, errors.Wrap(err, "error when creating transactor")
 	}
 
 	var i uint64 = 0
@@ -440,7 +543,7 @@ func Register(cfg *Config, privKey string, amount int, userMessageLimit uint32) 
 
 		m, err := rlnInstance.MembershipKeyGen()
 		if err != nil {
-			return errors.Wrap(err, "error when generating membership")
+			return filesNames, errors.Wrap(err, "error when generating membership")
 		}
 
 		mBig := rln.Bytes32ToBigInt(m.IDCommitment)
@@ -448,24 +551,28 @@ func Register(cfg *Config, privKey string, amount int, userMessageLimit uint32) 
 		// Create a tx calling the update rewards root function with the new merkle root
 		tx, err := cfg.contract.Register(auth, mBig, userMessageLimit)
 		if err != nil {
-			return errors.Wrap(err, "error when sending tx")
+			return filesNames, errors.Wrap(err, "error when sending tx")
 		}
 
 		log.Info("Tx sent. Nonce: ", auth.Nonce, " Commitment: ", mBig, " UserMessageLimit: ", userMessageLimit, " TxHash: ", tx.Hash().Hex())
 
 		rankingsJson, err := json.Marshal(m)
 		if err != nil {
-			return errors.Wrap(err, "error when marshalling membership")
+			return filesNames, errors.Wrap(err, "error when marshalling membership")
 		}
-		err = ioutil.WriteFile(fmt.Sprintf("membership_%s.json", mBig.String()), rankingsJson, 0644)
+
+		fileName := fmt.Sprintf("membership_%s.json", mBig.String())
+		err = ioutil.WriteFile(fileName, rankingsJson, 0644)
 		if err != nil {
-			return errors.Wrap(err, "error when writing membership to file")
+			return filesNames, errors.Wrap(err, "error when writing membership to file")
 		}
+
+		filesNames = append(filesNames, fileName)
 
 		time.Sleep(4 * time.Second)
 	}
 
-	return nil
+	return filesNames, nil
 }
 
 // Listens for new registrations and logs new root. Note that slashings are not
@@ -609,7 +716,7 @@ func LocalGenerateRlnProof(
 	idCred := &rln.IdentityCredential{}
 	jsonFile, err := os.Open(rlnFile)
 	if err != nil {
-		return errors.Wrap(err, "error when opening file")
+		return errors.Wrap(err, fmt.Sprintf("error when opening file %s", rlnFile))
 	}
 
 	bb, err := io.ReadAll(jsonFile)
@@ -674,12 +781,13 @@ func OnchainGenerateRlnProof(
 	cfg *Config,
 	membershipFile string,
 	message string,
-	contentTopic string) (*rln.RateLimitProof, *rln.Epoch, error) {
+	contentTopic string,
+	messageId uint32) (*rln.RateLimitProof, *rln.Epoch, error) {
 
 	idCred := &rln.IdentityCredential{}
 	jsonFile, err := os.Open(membershipFile)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "error when opening file")
+		return nil, nil, errors.Wrap(err, fmt.Sprintf("error when opening file %s", membershipFile))
 	}
 
 	bb, err := io.ReadAll(jsonFile)
@@ -727,9 +835,6 @@ func OnchainGenerateRlnProof(
 	// https://github.com/waku-org/go-waku/blob/v0.9.0/waku/v2/protocol/rln/common.go#L33-L40
 	data := append([]byte(message), []byte(contentTopic)...)
 
-	// TODO: Hardcoded by now
-	messageId := uint32(1)
-
 	epoch := rln.GetCurrentEpoch()
 
 	rlnWitness, err := rlnInstance.CreateWitness(
@@ -772,7 +877,7 @@ func VerifyRlnProof(cfg *Config, proofFile string, message string, contentTopic 
 	proof := &rln.RateLimitProof{}
 	jsonFile, err := os.Open(proofFile)
 	if err != nil {
-		return errors.Wrap(err, "error when opening file")
+		return errors.Wrap(err, fmt.Sprintf("error when opening file %s", proofFile))
 	}
 
 	bb, err := io.ReadAll(jsonFile)
@@ -916,7 +1021,10 @@ func SendMessage(
 	contentTopic string,
 	clusterId uint16,
 	lightpushPeer string,
-	pubsubTopic string) error {
+	pubsubTopic string,
+	messageId uint32) error {
+
+	log.Info("Selected membership file: ", membershipFile)
 
 	wakuNode, err := node.New(node.WithClusterID(clusterId))
 	if err != nil {
@@ -927,7 +1035,7 @@ func SendMessage(
 		return errors.Wrap(err, "error when starting waku node")
 	}
 
-	rlnProof, epoch, err := OnchainGenerateRlnProof(cfg, membershipFile, message, contentTopic)
+	rlnProof, epoch, err := OnchainGenerateRlnProof(cfg, membershipFile, message, contentTopic, messageId)
 	if err != nil {
 		return errors.Wrap(err, "error when generating rln proof")
 	}
