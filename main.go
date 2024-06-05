@@ -228,7 +228,7 @@ func main() {
 					if err != nil {
 						return errors.Wrap(err, "error when creating config")
 					}
-					_, err = OnchainGenerateRlnProof(cfg, membershipFile, message, contentTopic)
+					_, _, err = OnchainGenerateRlnProof(cfg, membershipFile, message, contentTopic)
 					return err
 				},
 			},
@@ -338,6 +338,7 @@ func main() {
 						uint16(clusterId),
 						lightpushPeer,
 						pubsubTopic)
+
 					if err != nil {
 						return errors.Wrap(err, "error when sending message")
 					}
@@ -634,20 +635,13 @@ func LocalGenerateRlnProof(
 
 	// Topic and message are used as inputs
 	// https://github.com/waku-org/go-waku/blob/v0.9.0/waku/v2/protocol/rln/common.go#L33-L40
-	x := append([]byte(message), []byte(contentTopic)...)
+	data := append([]byte(message), []byte(contentTopic)...)
 
-	/*
-		data []byte,
-		key IdentityCredential,
-		index MembershipIndex,
-		epoch Epoch,
-		messageId uint32
-	*/
-
+	// TODO: Hardcoded by now
 	messageId := uint32(1)
 
 	proof, err := rlnInstance.GenerateProof(
-		x, // TODO: is this x? or data (which is x hashed with topic)
+		data,
 		*idCred,
 		rln.MembershipIndex(membershipIndex),
 		rln.GetCurrentEpoch(),
@@ -680,42 +674,42 @@ func OnchainGenerateRlnProof(
 	cfg *Config,
 	membershipFile string,
 	message string,
-	contentTopic string) (*rln.RateLimitProof, error) {
+	contentTopic string) (*rln.RateLimitProof, *rln.Epoch, error) {
 
 	idCred := &rln.IdentityCredential{}
 	jsonFile, err := os.Open(membershipFile)
 	if err != nil {
-		return nil, errors.Wrap(err, "error when opening file")
+		return nil, nil, errors.Wrap(err, "error when opening file")
 	}
 
 	bb, err := io.ReadAll(jsonFile)
 	if err != nil {
-		return nil, errors.Wrap(err, "error when reading file")
+		return nil, nil, errors.Wrap(err, "error when reading file")
 	}
 	err = json.Unmarshal(bb, &idCred)
 	if err != nil {
-		return nil, errors.Wrap(err, "error when unmarshalling file")
+		return nil, nil, errors.Wrap(err, "error when unmarshalling file")
 	}
 
 	rlnInstance, err := rln.NewRLN()
 	if err != nil {
-		return nil, errors.Wrap(err, "error when creating RLN instance")
+		return nil, nil, errors.Wrap(err, "error when creating RLN instance")
 	}
 
 	callOpts := &bind.CallOpts{Context: context.Background(), Pending: false}
 
 	exists, err := cfg.contract.MemberExists(callOpts, rln.Bytes32ToBigInt(idCred.IDCommitment))
 	if err != nil {
-		return nil, errors.Wrap(err, "error when checking if membership exists")
+		return nil, nil, errors.Wrap(err, "error when checking if membership exists")
 	}
 
 	if !exists {
-		return nil, errors.New("membership does not exist in the contract")
+		return nil, nil, errors.New("membership does not exist in the contract")
 	}
 
 	userMessageLimit, membershipIndex, rateCommitment, err := cfg.contract.IdCommitmentToMetadata(callOpts, rln.Bytes32ToBigInt(idCred.IDCommitment))
 	if err != nil {
-		return nil, errors.Wrap(err, "error when fetching membership index")
+		return nil, nil, errors.Wrap(err, "error when fetching membership index")
 	}
 
 	log.WithFields(log.Fields{
@@ -726,36 +720,38 @@ func OnchainGenerateRlnProof(
 
 	merkleProof, err := OnchainMerkleProof(cfg, uint64(membershipIndex))
 	if err != nil {
-		return nil, errors.Wrap(err, "error when fetching merkle proof")
+		return nil, nil, errors.Wrap(err, "error when fetching merkle proof")
 	}
 
 	// Topic and message are used as inputs
 	// https://github.com/waku-org/go-waku/blob/v0.9.0/waku/v2/protocol/rln/common.go#L33-L40
-	x := append([]byte(message), []byte(contentTopic)...)
+	data := append([]byte(message), []byte(contentTopic)...)
 
-	// TODO: This should be configurable or automatic
-	messageId := uint32(0)
+	// TODO: Hardcoded by now
+	messageId := uint32(1)
+
+	epoch := rln.GetCurrentEpoch()
 
 	rlnWitness, err := rlnInstance.CreateWitness(
 		idCred.IDSecretHash,
 		userMessageLimit,
 		messageId,
-		x, // TODO: this is not really x
-		rln.GetCurrentEpoch(),
+		data,
+		epoch,
 		*merkleProof)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "error when creating witness")
+		return nil, nil, errors.Wrap(err, "error when creating witness")
 	}
 
 	proof, err := rlnInstance.GenerateRLNProofWithWitness(rlnWitness)
 	if err != nil {
-		return nil, errors.Wrap(err, "error when generating proof")
+		return nil, nil, errors.Wrap(err, "error when generating proof")
 	}
 
 	proofJson, err := json.Marshal(proof)
 	if err != nil {
-		return nil, errors.Wrap(err, "error when marshalling proof")
+		return nil, nil, errors.Wrap(err, "error when marshalling proof")
 	}
 
 	// Just a hash of the proof, used as filename
@@ -764,12 +760,12 @@ func OnchainGenerateRlnProof(
 	fileName := fmt.Sprintf("proof_%s.json", hex.EncodeToString(hash[:]))
 	err = ioutil.WriteFile(fileName, proofJson, 0644)
 	if err != nil {
-		return nil, errors.Wrap(err, "error when writing to file")
+		return nil, nil, errors.Wrap(err, "error when writing to file")
 	}
 
 	log.Info("Proof generated succesfully and stored as ", fileName)
 
-	return proof, nil
+	return proof, &epoch, nil
 }
 
 func VerifyRlnProof(cfg *Config, proofFile string, message string, contentTopic string) error {
@@ -844,8 +840,8 @@ func SyncTree(cfg *Config, chunkSize uint64) (*rln.RLN, error) {
 		if end > uint64(numLeafs-1) {
 			end = uint64(numLeafs - 1)
 		}
-		log.Info("Fetching from ", start, " to ", end, " out of ", numLeafs, " leafs")
-		// TODO: This was changed. Its now [start, end] instead of [start, end)
+		log.Info("Fetching memberships [", start, ",", end, "] out of ", numLeafs, " leafs")
+
 		leafs, err := cfg.contract.GetCommitments(callOpts, uint32(start), uint32(end))
 		if err != nil {
 			return nil, errors.Wrap(err, "error when fetching commitments")
@@ -913,7 +909,6 @@ func reverseBytes(b []byte) []byte {
 
 // See: https://github.com/waku-org/go-waku/blob/master/examples/basic-light-client/main.go
 // Note that this requires a running waku node with lightpush enabled at localhost.
-
 func SendMessage(
 	cfg *Config,
 	membershipFile string,
@@ -932,16 +927,12 @@ func SendMessage(
 		return errors.Wrap(err, "error when starting waku node")
 	}
 
-	rlnProof, err := OnchainGenerateRlnProof(cfg, membershipFile, message, contentTopic)
+	rlnProof, epoch, err := OnchainGenerateRlnProof(cfg, membershipFile, message, contentTopic)
 	if err != nil {
 		return errors.Wrap(err, "error when generating rln proof")
 	}
 
-	// TODO: Get current timestamp
-	//epoch := rln.ToEpoch(3)
-	epoch := rln.GetCurrentEpoch()
-
-	serializedRlnProof, err := serializeRLNProof(rlnProof, epoch, rln.RLN_IDENTIFIER[:])
+	serializedRlnProof, err := serializeRLNProof(rlnProof, *epoch, rln.RLN_IDENTIFIER[:])
 	if err != nil {
 		return errors.Wrap(err, "error when serializing rln proof")
 	}
@@ -997,57 +988,20 @@ func SendMessage(
 	return nil
 }
 
-// A mix of:
-// https://github.com/waku-org/go-waku/blob/8805f6cc45ff8c3c9d3d479d3fa8f5920fdc588f/waku/v2/protocol/rln/waku_rln_relay.go#L215-L218
-// https://github.com/waku-org/go-waku/blob/8805f6cc45ff8c3c9d3d479d3fa8f5920fdc588f/waku/v2/protocol/rln/waku_rln_relay.go#L288-L301
-/* TODO: Remove this
-func serializeRLNProof(proof *rln.RateLimitProof) ([]byte, error) {
-
-	// TODO: This has changed
-	test := &rlnpb.RateLimitProof{
-		Proof:         proof.Proof[:],
-		MerkleRoot:    proof.MerkleRoot[:],
-		Epoch:         proof.Epoch[:],
-		ShareX:        proof.ShareX[:],
-		ShareY:        proof.ShareY[:],
-		Nullifier:     proof.Nullifier[:],
-		RlnIdentifier: proof.RLNIdentifier[:],
-	}
-
-	ser, err := proto.Marshal(test)
-	if err != nil {
-		return nil, errors.Wrap(err, "error when marshalling proof")
-	}
-
-	return ser, nil
-}
-*/
-
 // https://github.com/waku-org/nwaku/blob/v0.28.0/waku/waku_rln_relay/protocol_types.nim#L35
 // serialized as: https://github.com/waku-org/nwaku/blob/v0.28.0/waku/waku_rln_relay/protocol_types.nim#L109
 func serializeRLNProof(proof *rln.RateLimitProof, epoch rln.Epoch, rlnIdentifier []byte) ([]byte, error) {
-
-	/*
-			  output.write3(1, nsp.proof)
-		  output.write3(2, nsp.merkleRoot)
-		  output.write3(3, nsp.epoch)
-		  output.write3(4, nsp.shareX)
-		  output.write3(5, nsp.shareY)
-		  output.write3(6, nsp.nullifier)
-		  output.write3(7, nsp.rlnIdentifier)
-	*/
-
-	test := &rlnpb.RateLimitProof{
+	rLimiProof := &rlnpb.RateLimitProof{
 		Proof:         proof.Proof[:],
 		MerkleRoot:    proof.MerkleRoot[:],
 		Epoch:         epoch[:],
 		ShareX:        proof.ShareX[:],
 		ShareY:        proof.ShareY[:],
 		Nullifier:     proof.Nullifier[:],
-		RlnIdentifier: rlnIdentifier[:], // TODO: This is wrong? I have to modify the protos??. Perhaps it correct.
+		RlnIdentifier: rlnIdentifier[:],
 	}
 
-	ser, err := proto.Marshal(test)
+	ser, err := proto.Marshal(rLimiProof)
 	if err != nil {
 		return nil, errors.Wrap(err, "error when marshalling proof")
 	}
