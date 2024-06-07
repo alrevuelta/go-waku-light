@@ -343,17 +343,21 @@ func main() {
 						return errors.Wrap(err, "error when creating config")
 					}
 
-					msgId := uint32(0)
+					wakuNode, peerId, err := CreateLightClient(uint16(clusterId), lightpushPeer, pubsubTopic)
+					if err != nil {
+						return errors.Wrap(err, "error when creating light client")
+					}
 
+					msgId := uint32(0)
 					err = SendMessage(
 						cfg,
 						membershipFile,
 						message,
 						contentTopic,
-						uint16(clusterId),
-						lightpushPeer,
+						peerId,
 						pubsubTopic,
-						msgId)
+						msgId,
+						wakuNode)
 
 					if err != nil {
 						return errors.Wrap(err, "error when sending message")
@@ -418,23 +422,25 @@ func main() {
 
 					log.Info("Membership registered: ", membershipFiles)
 
+					wakuNode, peerId, err := CreateLightClient(uint16(clusterId), lightpushPeer, pubsubTopic)
+					if err != nil {
+						return errors.Wrap(err, "error when creating light client")
+					}
+
 					msgId := uint32(0)
 					for {
+						// TODO: Allow to send depending on size
 						messageToSend := fmt.Sprintf("%s: %d", message, msgId)
 
-						// TODO: Optimize this. A new waku light client
-						// is created on every iteration. This is not optimal.
-						// Also the file is opened and read on every iteration.
-						// Etc.
 						err = SendMessage(
 							cfg,
 							membershipFiles[0],
 							messageToSend,
 							contentTopic,
-							uint16(clusterId),
-							lightpushPeer,
+							peerId,
 							pubsubTopic,
-							msgId)
+							msgId,
+							wakuNode)
 
 						if err != nil {
 							return errors.Wrap(err, "error when sending message")
@@ -1012,6 +1018,33 @@ func reverseBytes(b []byte) []byte {
 	return reversed
 }
 
+func CreateLightClient(clusterId uint16, lightpushPeer string, pubsubTopic string) (*node.WakuNode, *peer.AddrInfo, error) {
+	wakuNode, err := node.New(node.WithClusterID(clusterId))
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "error when creating waku node")
+	}
+
+	if err := wakuNode.Start(context.Background()); err != nil {
+		return nil, nil, errors.Wrap(err, "error when starting waku node")
+	}
+
+	peerAddr, err := multiaddr.NewMultiaddr(lightpushPeer)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "error when creating multiaddr")
+	}
+
+	_, err = wakuNode.AddPeer(peerAddr, peerstore.Static, []string{pubsubTopic}, []libp2pprot.ID{lightpush.LightPushID_v20beta1}...)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "error when adding peer")
+	}
+	peerId, err := peer.AddrInfoFromP2pAddr(peerAddr)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "error when getting peer id")
+	}
+
+	return wakuNode, peerId, nil
+}
+
 // See: https://github.com/waku-org/go-waku/blob/master/examples/basic-light-client/main.go
 // Note that this requires a running waku node with lightpush enabled at localhost.
 func SendMessage(
@@ -1019,21 +1052,12 @@ func SendMessage(
 	membershipFile string,
 	message string,
 	contentTopic string,
-	clusterId uint16,
-	lightpushPeer string,
+	peerId *peer.AddrInfo,
 	pubsubTopic string,
-	messageId uint32) error {
+	messageId uint32,
+	wakuNode *node.WakuNode) error {
 
 	log.Info("Selected membership file: ", membershipFile)
-
-	wakuNode, err := node.New(node.WithClusterID(clusterId))
-	if err != nil {
-		return errors.Wrap(err, "error when creating waku node")
-	}
-
-	if err := wakuNode.Start(context.Background()); err != nil {
-		return errors.Wrap(err, "error when starting waku node")
-	}
 
 	rlnProof, epoch, err := OnchainGenerateRlnProof(cfg, membershipFile, message, contentTopic, messageId)
 	if err != nil {
@@ -1051,20 +1075,6 @@ func SendMessage(
 		ContentTopic:   contentTopic,
 		Timestamp:      utils.GetUnixEpoch(),
 		RateLimitProof: serializedRlnProof,
-	}
-
-	peerAddr, err := multiaddr.NewMultiaddr(lightpushPeer)
-	if err != nil {
-		return errors.Wrap(err, "error when creating multiaddr")
-	}
-
-	_, err = wakuNode.AddPeer(peerAddr, peerstore.Static, []string{pubsubTopic}, []libp2pprot.ID{lightpush.LightPushID_v20beta1}...)
-	if err != nil {
-		return errors.Wrap(err, "error when adding peer")
-	}
-	peerId, err := peer.AddrInfoFromP2pAddr(peerAddr)
-	if err != nil {
-		return errors.Wrap(err, "error when getting peer id")
 	}
 
 	log.WithFields(log.Fields{
