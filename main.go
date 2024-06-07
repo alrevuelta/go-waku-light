@@ -598,6 +598,10 @@ func Register(cfg *Config, privKey string, amount int, userMessageLimit uint32) 
 		filesNames = append(filesNames, fileName)
 	}
 
+	// We wait some time to ensure the root is in nwaku nodes
+	log.Info("Waiting for the root to be propagated to the network...")
+	time.Sleep(6 * time.Second)
+
 	return filesNames, nil
 }
 
