@@ -449,6 +449,10 @@ func main() {
 
 						msgId++
 
+						if msgId == uint32(userMessageLimit) {
+							msgId = 0
+						}
+
 						log.Info("Message sent: ", messageToSend, " sleeping ", messageEverySecs, " seconds...")
 						time.Sleep(time.Duration(messageEverySecs) * time.Second)
 					}
