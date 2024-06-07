@@ -35,6 +35,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/pkg/errors"
@@ -562,6 +563,27 @@ func Register(cfg *Config, privKey string, amount int, userMessageLimit uint32) 
 
 		log.Info("Tx sent. Nonce: ", auth.Nonce, " Commitment: ", mBig, " UserMessageLimit: ", userMessageLimit, " TxHash: ", tx.Hash().Hex())
 
+		log.Info("Waiting for tx to be validated...")
+
+		// Leave 60 seconds for the tx to be validated
+		deadline := time.Now().Add(60 * time.Second)
+		ctx, cancelCtx := context.WithDeadline(context.Background(), deadline)
+		defer cancelCtx()
+
+		// It stops waiting when the context is canceled.
+		receipt, err := bind.WaitMined(ctx, cfg.client, tx)
+		if ctx.Err() != nil {
+			return filesNames, errors.Wrap(err,
+				fmt.Sprint("timeout expired waiting for tx to be validated txHash: ",
+					tx.Hash().Hex()))
+		}
+		if receipt.Status != types.ReceiptStatusSuccessful {
+			return filesNames, errors.Wrap(err,
+				fmt.Sprintf("tx failed err: %d hash: %s", receipt.Status, tx.Hash().Hex()))
+		}
+
+		log.Info("Tx validated. Receipt: ", receipt)
+
 		rankingsJson, err := json.Marshal(m)
 		if err != nil {
 			return filesNames, errors.Wrap(err, "error when marshalling membership")
@@ -574,8 +596,6 @@ func Register(cfg *Config, privKey string, amount int, userMessageLimit uint32) 
 		}
 
 		filesNames = append(filesNames, fileName)
-
-		time.Sleep(4 * time.Second)
 	}
 
 	return filesNames, nil
