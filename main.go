@@ -63,6 +63,7 @@ func main() {
 	var contractAddress string
 	var userMessageLimit uint64
 	var messageEverySecs uint64
+	var amountMessageToSend uint64
 
 	// Examples of usage:
 	// ./go-waku-light register --priv-key=REPLACE_YOUR_PRIV_KEY --user-message-limit=5
@@ -81,10 +82,8 @@ func main() {
 	// ./go-waku-light local-generate-rln-proof --membership-file=membership_xxx.json --chunk-size=500
 	// ./go-waku-light verify-rln-proof --proof-file=proof_xxx.json
 
-	// Publish message via lightpush
-	// ./go-waku-light send-message --membership-file=membership_xxx.json --message="light client sending a rln message"
-
 	// Publish multiple messages in an infinite loop registering also the membership
+	// Use --amount-message-to-send=0 to send messages indefinitely
 	// ./go-waku-light send-messages-loop \
 	// --priv-key=SOME_PRIV_KEY \
 	// --user-message-limit=5 \
@@ -305,68 +304,6 @@ func main() {
 					return err
 				},
 			},
-
-			{
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:        "membership-file",
-						Destination: &membershipFile,
-					},
-					&cli.StringFlag{
-						Name:        "message",
-						Destination: &message,
-					},
-					&cli.StringFlag{
-						Name:        "content-topic",
-						Destination: &contentTopic,
-						Value:       "/basic2/1/test/proto",
-					},
-					&cli.StringFlag{
-						Name:        "lightpush-peer",
-						Destination: &lightpushPeer,
-						Value:       "/ip4/127.0.0.1/tcp/60000/p2p/16Uiu2HAkxTGJRgkCxgMDH4A4QBvw3q462BRkVJaPF5KQWkc1t4cp",
-					},
-					&cli.StringFlag{
-						Name:        "pubsub-topic",
-						Destination: &pubsubTopic,
-						Value:       "/waku/2/rs/100/0",
-					},
-					&cli.IntFlag{
-						Name:        "cluster-id",
-						Destination: &clusterId,
-						Value:       100,
-					},
-				},
-				Name: "send-message",
-				Action: func(cCtx *cli.Context) error {
-					cfg, err := CreateConfig(ethEndpoint, contractAddress)
-					if err != nil {
-						return errors.Wrap(err, "error when creating config")
-					}
-
-					wakuNode, peerId, err := CreateLightClient(uint16(clusterId), lightpushPeer, pubsubTopic)
-					if err != nil {
-						return errors.Wrap(err, "error when creating light client")
-					}
-
-					msgId := uint32(0)
-					err = SendMessage(
-						cfg,
-						membershipFile,
-						message,
-						contentTopic,
-						peerId,
-						pubsubTopic,
-						msgId,
-						wakuNode)
-
-					if err != nil {
-						return errors.Wrap(err, "error when sending message")
-					}
-
-					return nil
-				},
-			},
 			{
 				Flags: []cli.Flag{
 					&cli.StringFlag{
@@ -408,6 +345,11 @@ func main() {
 						Value:       10,
 						Destination: &messageEverySecs,
 					},
+					&cli.Uint64Flag{
+						Name:        "amount-message-to-send",
+						Value:       0,
+						Destination: &amountMessageToSend,
+					},
 				},
 				Name: "send-messages-loop",
 				Action: func(cCtx *cli.Context) error {
@@ -429,6 +371,7 @@ func main() {
 					}
 
 					msgId := uint32(0)
+					numSent := uint64(0)
 					for {
 						// TODO: Allow to send depending on size
 						messageToSend := fmt.Sprintf("%s: %d", message, msgId)
@@ -448,6 +391,13 @@ func main() {
 						}
 
 						msgId++
+						numSent++
+
+						// If we sent the amount of messages requested, we stop
+						if amountMessageToSend == numSent {
+							log.Info("Sent all messages, completed. Exiting...")
+							return nil
+						}
 
 						if msgId == uint32(userMessageLimit) {
 							msgId = 0

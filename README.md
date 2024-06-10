@@ -82,13 +82,6 @@ Any RLN proof can be verified against the smart contract Merkle root.
 ./main verify-rln-proof --proof-file=proof_xxx.json
 ```
 
-You can also create a valid RLN message using onchain Merkle proofs and send it via lightpush to a node using the following. Note that this uses a custom *ad hoc* test network. Start by running a couple of nodes and connect them to each other. See example in previous section.
-
-Now using your membership, introduce a message and it will be sent via lightpush using the first node. You should see that both nodes verify the RLN proof ok and relay the message to each other.
-```
-./main send-message --membership-file=membership_xxx.json --message="light client sending a rln message"
-```
-
 ## Advanced
 
 The `contract/contract.go` can be updated if the abi is changed as follows:
