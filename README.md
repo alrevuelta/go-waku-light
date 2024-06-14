@@ -1,5 +1,7 @@
 # go-waku-light
 
+Note: This uses a temporal `go-waku` [branch](https://github.com/waku-org/go-waku/tree/upgrade-rln-v2)
+
 This repo contains a proof of concept for a `waku` light client, integrating [RLNv2 + onchain trees](https://github.com/waku-org/waku-rlnv2-contract). It allows to create RLN zk-proofs without having to synchronize the membership Merkle tree. It achieves so by getting the Merkle proof required to generate the zk RLN proof directly from the smart contract, included upstream [here](https://github.com/privacy-scaling-explorations/zk-kit/pull/162).
 
 And end to end integration can be done by creating a new network using [this modified contract](https://cardona-zkevm.polygonscan.com/address/0x1ae47AAb605E3639cA88ce8F6183C3035Eb60c62) deployed in the Polygon zkEVM. We create two nodes.

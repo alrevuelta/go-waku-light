@@ -683,12 +683,16 @@ github.com/waku-org/go-waku v0.8.1-0.20240418133015-8805f6cc45ff h1:oAUTEXt2Tni1
 github.com/waku-org/go-waku v0.8.1-0.20240418133015-8805f6cc45ff/go.mod h1:TSUNPYBJbkqkpxoVrUdCwFdlmLJjGShso6p/w1MzRAY=
 github.com/waku-org/go-waku v0.8.1-0.20240531054844-98e0b42a8694 h1:dGM/dg03ssAzRojqJEzA5bNKU9VEzdbaduxQjDvgXo0=
 github.com/waku-org/go-waku v0.8.1-0.20240531054844-98e0b42a8694/go.mod h1:ul1u9bZGcYwqbIAOV6SXDgTsb0QRUjv+8odUbkFsFhc=
+github.com/waku-org/go-waku v0.8.1-0.20240614083209-bbf633eeca63 h1:00LoHRJI7dqEDDm7lC3A2NtuZAKwPCdfd5YWpVMW3Oo=
+github.com/waku-org/go-waku v0.8.1-0.20240614083209-bbf633eeca63/go.mod h1:ddfo5YkDqJ20upE9pMy99lqSI0REaHJyoEpNoD/AYsU=
 github.com/waku-org/go-zerokit-rln v0.1.14-0.20240124153136-14960f3aff2a h1:QxwhGVNajSoeKElW5rjd3bmu3eF5SHXUmFgOgcy0oXA=
 github.com/waku-org/go-zerokit-rln v0.1.14-0.20240124153136-14960f3aff2a/go.mod h1:UerBnX5Lthq5AvM3yOUuMM2YST00LDoCwhaOgFd0CD8=
 github.com/waku-org/go-zerokit-rln v0.1.14-0.20240530125354-84d12e61d918 h1:HPs/TJEPe2Sy96Rvizu7iTTyLKo4soQZu0//iZ42YU8=
 github.com/waku-org/go-zerokit-rln v0.1.14-0.20240530125354-84d12e61d918/go.mod h1:CR9oP81b9G5TfZ6VDNKvB3GWS052hhmt36t+C1rcMbo=
 github.com/waku-org/go-zerokit-rln v0.1.14-0.20240531051154-88462cf65458 h1:ws4jm3UVUwjkN19i5kVOFnt0nhRe1TKlIB91ShZEn+A=
 github.com/waku-org/go-zerokit-rln v0.1.14-0.20240531051154-88462cf65458/go.mod h1:CR9oP81b9G5TfZ6VDNKvB3GWS052hhmt36t+C1rcMbo=
+github.com/waku-org/go-zerokit-rln v0.1.14-0.20240614081832-cbb253d8910e h1:8uwYIiMFgYPpd7PYsc3YC60+3JM+5awbPv0iW5+M3zs=
+github.com/waku-org/go-zerokit-rln v0.1.14-0.20240614081832-cbb253d8910e/go.mod h1:CR9oP81b9G5TfZ6VDNKvB3GWS052hhmt36t+C1rcMbo=
 github.com/waku-org/go-zerokit-rln-apple v0.0.0-20240124080743-37fbb869c330 h1:TJmn6GQ5HpxdZraZn6DjUqWy8UV+8pB4yWcsWFAngqE=
 github.com/waku-org/go-zerokit-rln-apple v0.0.0-20240124080743-37fbb869c330/go.mod h1:KYykqtdApHVYZ3G0spwMnoxc5jH5eI3jyO9SwsSfi48=
 github.com/waku-org/go-zerokit-rln-apple v0.0.0-20240529153423-5df5db48b69f h1:CEBW4vu8I60OakKExZUE7G4oY7Z/glQXxPYedpZ4Sq8=
