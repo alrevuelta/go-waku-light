@@ -64,6 +64,7 @@ func main() {
 	var userMessageLimit uint64
 	var messageEverySecs uint64
 	var amountMessageToSend uint64
+	var epochSizeSecs uint64
 
 	// Examples of usage:
 	// ./go-waku-light register --priv-key=REPLACE_YOUR_PRIV_KEY --user-message-limit=5
@@ -92,8 +93,16 @@ func main() {
 	// --pubsub-topic=/waku/2/rs/100/0 \
 	// --cluster-id=100 \
 	// --lightpush-peer=/ip4/127.0.0.1/tcp/60000/p2p/16Uiu2HAkxTGJRgkCxgMDH4A4QBvw3q462BRkVJaPF5KQWkc1t4cp \
-	// --message-every-secs=5
+	// --message-every-secs=5 \
+	// --epoch-size-secs=60
 	app := &cli.App{
+		Before: func(c *cli.Context) error {
+			log.Info("Arguments:")
+			for _, arg := range c.Args().Slice() {
+				log.Info(arg)
+			}
+			return nil
+		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "eth-endpoint",
@@ -233,6 +242,11 @@ func main() {
 						Destination: &contentTopic,
 						Value:       "/basic2/1/test/proto",
 					},
+					&cli.Uint64Flag{
+						Name:        "epoch-size-secs",
+						Destination: &epochSizeSecs,
+						Value:       1,
+					},
 				},
 				Name: "onchain-generate-rln-proof",
 				Action: func(cCtx *cli.Context) error {
@@ -241,7 +255,7 @@ func main() {
 						return errors.Wrap(err, "error when creating config")
 					}
 					messageId := uint32(0)
-					_, _, err = OnchainGenerateRlnProof(cfg, membershipFile, message, contentTopic, messageId)
+					_, _, err = OnchainGenerateRlnProof(cfg, membershipFile, message, contentTopic, messageId, epochSizeSecs)
 					return err
 				},
 			},
@@ -266,6 +280,11 @@ func main() {
 						Destination: &contentTopic,
 						Value:       "/basic2/1/test/proto",
 					},
+					&cli.Uint64Flag{
+						Name:        "epoch-size-secs",
+						Destination: &epochSizeSecs,
+						Value:       1,
+					},
 				},
 				Name: "local-generate-rln-proof",
 				Action: func(cCtx *cli.Context) error {
@@ -273,7 +292,7 @@ func main() {
 					if err != nil {
 						return errors.Wrap(err, "error when creating config")
 					}
-					err = LocalGenerateRlnProof(cfg, chunkSize, membershipFile, message, contentTopic)
+					err = LocalGenerateRlnProof(cfg, chunkSize, membershipFile, message, contentTopic, epochSizeSecs)
 					return err
 				},
 			},
@@ -292,6 +311,11 @@ func main() {
 						Name:        "content-topic",
 						Destination: &contentTopic,
 						Value:       "/basic2/1/test/proto",
+					},
+					&cli.Uint64Flag{
+						Name:        "epoch-size-secs",
+						Destination: &epochSizeSecs,
+						Value:       1,
 					},
 				},
 				Name: "verify-rln-proof",
@@ -350,6 +374,11 @@ func main() {
 						Value:       0,
 						Destination: &amountMessageToSend,
 					},
+					&cli.Uint64Flag{
+						Name:        "epoch-size-secs",
+						Destination: &epochSizeSecs,
+						Value:       1,
+					},
 				},
 				Name: "send-messages-loop",
 				Action: func(cCtx *cli.Context) error {
@@ -384,7 +413,8 @@ func main() {
 							peerId,
 							pubsubTopic,
 							msgId,
-							wakuNode)
+							wakuNode,
+							epochSizeSecs)
 
 						if err != nil {
 							return errors.Wrap(err, "error when sending message")
@@ -695,7 +725,8 @@ func LocalGenerateRlnProof(
 	chunkSize uint64,
 	rlnFile string,
 	message string,
-	contentTopic string) error {
+	contentTopic string,
+	epochSizeSecs uint64) error {
 
 	idCred := &rln.IdentityCredential{}
 	jsonFile, err := os.Open(rlnFile)
@@ -735,7 +766,7 @@ func LocalGenerateRlnProof(
 		data,
 		*idCred,
 		rln.MembershipIndex(membershipIndex),
-		rln.GetCurrentEpoch(),
+		rln.GetCurrentEpoch(epochSizeSecs),
 		messageId)
 
 	if err != nil {
@@ -766,7 +797,8 @@ func OnchainGenerateRlnProof(
 	membershipFile string,
 	message string,
 	contentTopic string,
-	messageId uint32) (*rln.RateLimitProof, *rln.Epoch, error) {
+	messageId uint32,
+	epochSizeSecs uint64) (*rln.RateLimitProof, *rln.Epoch, error) {
 
 	idCred := &rln.IdentityCredential{}
 	jsonFile, err := os.Open(membershipFile)
@@ -819,7 +851,7 @@ func OnchainGenerateRlnProof(
 	// https://github.com/waku-org/go-waku/blob/v0.9.0/waku/v2/protocol/rln/common.go#L33-L40
 	data := append([]byte(message), []byte(contentTopic)...)
 
-	epoch := rln.GetCurrentEpoch()
+	epoch := rln.GetCurrentEpoch(epochSizeSecs)
 
 	rlnWitness, err := rlnInstance.CreateWitness(
 		idCred.IDSecretHash,
@@ -1033,11 +1065,12 @@ func SendMessage(
 	peerId *peer.AddrInfo,
 	pubsubTopic string,
 	messageId uint32,
-	wakuNode *node.WakuNode) error {
+	wakuNode *node.WakuNode,
+	epochSizeSecs uint64) error {
 
 	log.Info("Selected membership file: ", membershipFile)
 
-	rlnProof, epoch, err := OnchainGenerateRlnProof(cfg, membershipFile, message, contentTopic, messageId)
+	rlnProof, epoch, err := OnchainGenerateRlnProof(cfg, membershipFile, message, contentTopic, messageId, epochSizeSecs)
 	if err != nil {
 		return errors.Wrap(err, "error when generating rln proof")
 	}
