@@ -9,7 +9,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/urfave/cli/v2 v2.27.2
 	github.com/waku-org/go-waku v0.8.1-0.20240614083209-bbf633eeca63
-	github.com/waku-org/go-zerokit-rln v0.1.14-0.20240614081832-cbb253d8910e
+	github.com/waku-org/go-zerokit-rln v0.1.14-0.20240614102049-a8e8aab76c85
 )
 
 require (
