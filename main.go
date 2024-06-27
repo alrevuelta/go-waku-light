@@ -438,6 +438,84 @@ func main() {
 					}
 				},
 			},
+			{
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "content-topic",
+						Destination: &contentTopic,
+						Value:       "/basic2/1/test/proto",
+					},
+					&cli.StringFlag{
+						Name:        "pubsub-topic",
+						Destination: &pubsubTopic,
+						Value:       "/waku/2/rs/100/0",
+					},
+					&cli.IntFlag{
+						Name:        "cluster-id",
+						Destination: &clusterId,
+						Value:       100,
+					},
+					&cli.StringFlag{
+						Name:        "lightpush-peer",
+						Destination: &lightpushPeer,
+						Value:       "/ip4/127.0.0.1/tcp/60000/p2p/16Uiu2HAkxTGJRgkCxgMDH4A4QBvw3q462BRkVJaPF5KQWkc1t4cp",
+					},
+				},
+				Name: "fuzz-epoch",
+				Action: func(cCtx *cli.Context) error {
+					wakuNode, peerId, err := CreateLightClient(uint16(clusterId), lightpushPeer, pubsubTopic)
+					if err != nil {
+						return errors.Wrap(err, "error when creating light client")
+					}
+
+					i := 0
+					for {
+						rlnProof := &rln.RateLimitProof{}
+						var randomEpoch [32]byte
+
+						if i%2 == 0 {
+							for i := range randomEpoch {
+								randomEpoch[i] = 255
+							}
+						} else {
+							for i := range randomEpoch {
+								randomEpoch[i] = 0
+							}
+
+						}
+
+						// Fill the array with random bytes
+						//_, err := rand.Read(randomEpoch[:])
+						//if err != nil {
+						//	return err
+						//}
+
+						serializedRlnProof, err := serializeRLNProof(rlnProof, randomEpoch, rln.RLN_IDENTIFIER[:])
+						if err != nil {
+							return errors.Wrap(err, "error when serializing rln proof")
+						}
+
+						messageToSend := fmt.Sprintf("%s: %d", message, i)
+						msg := &pb.WakuMessage{
+							Payload: []byte(messageToSend),
+							//Version:      &uint32(0),
+							ContentTopic:   contentTopic,
+							Timestamp:      utils.GetUnixEpoch(),
+							RateLimitProof: serializedRlnProof,
+						}
+
+						msgId, err := wakuNode.Lightpush().Publish(context.Background(), msg, lightpush.WithPeer(peerId.ID), lightpush.WithPubSubTopic(pubsubTopic))
+						if err != nil {
+							// We ignore the error here
+							//return errors.Wrap(err, "error when publishing message")
+						}
+
+						log.Info("Message sent with id: ", msgId)
+						log.Info("Random epoch injected: ", randomEpoch)
+						i++
+					}
+				},
+			},
 		},
 	}
 
