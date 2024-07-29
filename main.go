@@ -106,12 +106,12 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:        "eth-endpoint",
-				Value:       "wss://ws.cardona.zkevm-rpc.com",
+				Value:       "https://ethereum-sepolia-rpc.publicnode.com",
 				Destination: &ethEndpoint,
 			},
 			&cli.StringFlag{
 				Name:        "contract-address",
-				Value:       "0x1ae47AAb605E3639cA88ce8F6183C3035Eb60c62",
+				Value:       "0xCB33Aa5B38d79E3D9Fa8B10afF38AA201399a7e3",
 				Destination: &contractAddress,
 			},
 		},
@@ -352,17 +352,17 @@ func main() {
 					&cli.StringFlag{
 						Name:        "pubsub-topic",
 						Destination: &pubsubTopic,
-						Value:       "/waku/2/rs/100/0",
+						Value:       "/waku/2/rs/1/0",
 					},
 					&cli.IntFlag{
 						Name:        "cluster-id",
 						Destination: &clusterId,
-						Value:       100,
+						Value:       1,
 					},
 					&cli.StringFlag{
 						Name:        "lightpush-peer",
 						Destination: &lightpushPeer,
-						Value:       "/ip4/127.0.0.1/tcp/60000/p2p/16Uiu2HAkxTGJRgkCxgMDH4A4QBvw3q462BRkVJaPF5KQWkc1t4cp",
+						Value:       "/ip4/64.225.80.192/tcp/30303/p2p/16Uiu2HAmQSMNExfUYUqfuXWkD5DaNZnMYnigRxFKbk3tcEFQeQeE",
 					},
 					&cli.Uint64Flag{
 						Name:        "message-every-secs",
@@ -448,17 +448,17 @@ func main() {
 					&cli.StringFlag{
 						Name:        "pubsub-topic",
 						Destination: &pubsubTopic,
-						Value:       "/waku/2/rs/100/0",
+						Value:       "/waku/2/rs/1/0",
 					},
 					&cli.IntFlag{
 						Name:        "cluster-id",
 						Destination: &clusterId,
-						Value:       100,
+						Value:       1,
 					},
 					&cli.StringFlag{
 						Name:        "lightpush-peer",
 						Destination: &lightpushPeer,
-						Value:       "/ip4/127.0.0.1/tcp/60000/p2p/16Uiu2HAkxTGJRgkCxgMDH4A4QBvw3q462BRkVJaPF5KQWkc1t4cp",
+						Value:       "/ip4/64.225.80.192/tcp/30303/p2p/16Uiu2HAmQSMNExfUYUqfuXWkD5DaNZnMYnigRxFKbk3tcEFQeQeE",
 					},
 				},
 				Name: "fuzz-epoch",
