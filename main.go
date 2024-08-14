@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto/ecdsa"
 	"crypto/sha256"
@@ -40,6 +41,13 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/pkg/errors"
 )
+
+// Compatible with https://github.com/waku-org/waku-frontend/blob/master/src/App.tsx#L270-L273
+type Payload struct {
+	Content   string `json:"content"`
+	Name      string `json:"name"`
+	Timestamp int64  `json:"timestamp"`
+}
 
 type Config struct {
 	client   *ethclient.Client
@@ -245,7 +253,7 @@ func main() {
 					&cli.Uint64Flag{
 						Name:        "epoch-size-secs",
 						Destination: &epochSizeSecs,
-						Value:       1,
+						Value:       600,
 					},
 				},
 				Name: "onchain-generate-rln-proof",
@@ -255,7 +263,7 @@ func main() {
 						return errors.Wrap(err, "error when creating config")
 					}
 					messageId := uint32(0)
-					_, _, err = OnchainGenerateRlnProof(cfg, membershipFile, message, contentTopic, messageId, epochSizeSecs)
+					_, _, err = OnchainGenerateRlnProof(cfg, membershipFile, []byte(message), contentTopic, messageId, epochSizeSecs)
 					return err
 				},
 			},
@@ -283,7 +291,7 @@ func main() {
 					&cli.Uint64Flag{
 						Name:        "epoch-size-secs",
 						Destination: &epochSizeSecs,
-						Value:       1,
+						Value:       600,
 					},
 				},
 				Name: "local-generate-rln-proof",
@@ -315,7 +323,7 @@ func main() {
 					&cli.Uint64Flag{
 						Name:        "epoch-size-secs",
 						Destination: &epochSizeSecs,
-						Value:       1,
+						Value:       600,
 					},
 				},
 				Name: "verify-rln-proof",
@@ -326,6 +334,143 @@ func main() {
 					}
 					err = VerifyRlnProof(cfg, proofFile, message, contentTopic)
 					return err
+				},
+			},
+			{
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:        "priv-key",
+						Destination: &privKey,
+						Required:    true,
+					},
+					&cli.Uint64Flag{
+						Name:        "user-message-limit",
+						Value:       5,
+						Destination: &userMessageLimit,
+					},
+					&cli.StringFlag{
+						Name:        "content-topic",
+						Destination: &contentTopic,
+						Value:       "/basic2/1/test/proto",
+					},
+					&cli.StringFlag{
+						Name:        "pubsub-topic",
+						Destination: &pubsubTopic,
+						Value:       "/waku/2/rs/1/0",
+					},
+					&cli.IntFlag{
+						Name:        "cluster-id",
+						Destination: &clusterId,
+						Value:       1,
+					},
+					&cli.StringFlag{
+						Name:        "lightpush-peer",
+						Destination: &lightpushPeer,
+						Value:       "/ip4/64.225.80.192/tcp/30303/p2p/16Uiu2HAmQSMNExfUYUqfuXWkD5DaNZnMYnigRxFKbk3tcEFQeQeE",
+					},
+					&cli.Uint64Flag{
+						Name:        "epoch-size-secs",
+						Destination: &epochSizeSecs,
+						Value:       600,
+					},
+				},
+				Name: "chat",
+				Action: func(cCtx *cli.Context) error {
+					cfg, err := CreateConfig(ethEndpoint, contractAddress)
+					if err != nil {
+						return errors.Wrap(err, "error when creating config")
+					}
+
+					membershipFiles, err := Register(cfg, privKey, 1, uint32(userMessageLimit))
+					if err != nil {
+						return errors.Wrap(err, "error when registering memberships")
+					}
+
+					log.Info("Membership registered: ", membershipFiles)
+
+					reader := bufio.NewReader(os.Stdin)
+
+					var username string
+					var content string
+
+					// Get username
+					log.Info("Write your username and press enter: ")
+					username, err = reader.ReadString('\n')
+					if err != nil {
+						return errors.Wrap(err, "error when reading username")
+					}
+					username = trimNewline(username)
+
+					// Get message to send
+					log.Info("Write the message to send and press enter: ")
+					content, err = reader.ReadString('\n')
+					if err != nil {
+						return errors.Wrap(err, "error when reading content")
+					}
+					content = trimNewline(content)
+
+					log.Info("Username: ", username, " Content: ", content)
+
+					wakuNode, peerId, err := CreateLightClient(uint16(clusterId), lightpushPeer, pubsubTopic)
+					if err != nil {
+						return errors.Wrap(err, "error when creating light client")
+					}
+
+					msgId := uint32(0)
+					numSent := uint64(0)
+					for {
+						// This payload is compatible with waku-frontent
+						// https://github.com/waku-org/waku-frontend/blob/master/src/App.tsx#L270-L273
+						payload := Payload{
+							Content:   content,
+							Name:      username,
+							Timestamp: time.Now().Unix(),
+						}
+
+						serializedPayload, err := json.Marshal(payload)
+						if err != nil {
+							return errors.Wrap(err, "error when marshalling payload")
+						}
+
+						err = SendMessage(
+							cfg,
+							membershipFiles[0],
+							serializedPayload,
+							contentTopic,
+							peerId,
+							pubsubTopic,
+							msgId,
+							wakuNode,
+							epochSizeSecs)
+
+						if err != nil {
+							return errors.Wrap(err, "error when sending message")
+						}
+
+						msgId++
+						numSent++
+
+						// If we sent the amount of messages requested, we stop
+						if amountMessageToSend == numSent {
+							log.Info("Sent all messages, completed. Exiting...")
+							return nil
+						}
+
+						if msgId == uint32(userMessageLimit) {
+							msgId = 0
+						}
+
+						log.Info("Message sent: ", serializedPayload, " sleeping ", messageEverySecs, " seconds...")
+
+						log.Info("Write the message to send and press enter: ")
+						content, err = reader.ReadString('\n')
+						if err != nil {
+							return errors.Wrap(err, "error when reading content")
+						}
+						content = trimNewline(content)
+
+						time.Sleep(time.Duration(messageEverySecs) * time.Second)
+					}
 				},
 			},
 			{
@@ -377,7 +522,7 @@ func main() {
 					&cli.Uint64Flag{
 						Name:        "epoch-size-secs",
 						Destination: &epochSizeSecs,
-						Value:       1,
+						Value:       600,
 					},
 				},
 				Name: "send-messages-loop",
@@ -408,7 +553,7 @@ func main() {
 						err = SendMessage(
 							cfg,
 							membershipFiles[0],
-							messageToSend,
+							[]byte(messageToSend),
 							contentTopic,
 							peerId,
 							pubsubTopic,
@@ -873,7 +1018,7 @@ func LocalGenerateRlnProof(
 func OnchainGenerateRlnProof(
 	cfg *Config,
 	membershipFile string,
-	message string,
+	message []byte,
 	contentTopic string,
 	messageId uint32,
 	epochSizeSecs uint64) (*rln.RateLimitProof, *rln.Epoch, error) {
@@ -927,7 +1072,7 @@ func OnchainGenerateRlnProof(
 
 	// Topic and message are used as inputs
 	// https://github.com/waku-org/go-waku/blob/v0.9.0/waku/v2/protocol/rln/common.go#L33-L40
-	data := append([]byte(message), []byte(contentTopic)...)
+	data := append(message, []byte(contentTopic)...)
 
 	epoch := rln.GetCurrentEpoch(epochSizeSecs)
 
@@ -1138,7 +1283,7 @@ func CreateLightClient(clusterId uint16, lightpushPeer string, pubsubTopic strin
 func SendMessage(
 	cfg *Config,
 	membershipFile string,
-	message string,
+	message []byte,
 	contentTopic string,
 	peerId *peer.AddrInfo,
 	pubsubTopic string,
@@ -1198,7 +1343,7 @@ func SendMessage(
 // https://github.com/waku-org/nwaku/blob/v0.28.0/waku/waku_rln_relay/protocol_types.nim#L35
 // serialized as: https://github.com/waku-org/nwaku/blob/v0.28.0/waku/waku_rln_relay/protocol_types.nim#L109
 func serializeRLNProof(proof *rln.RateLimitProof, epoch rln.Epoch, rlnIdentifier []byte) ([]byte, error) {
-	rLimiProof := &rlnpb.RateLimitProof{
+	rLimitProof := &rlnpb.RateLimitProof{
 		Proof:         proof.Proof[:],
 		MerkleRoot:    proof.MerkleRoot[:],
 		Epoch:         epoch[:],
@@ -1208,10 +1353,20 @@ func serializeRLNProof(proof *rln.RateLimitProof, epoch rln.Epoch, rlnIdentifier
 		RlnIdentifier: rlnIdentifier[:],
 	}
 
-	ser, err := proto.Marshal(rLimiProof)
+	ser, err := proto.Marshal(rLimitProof)
 	if err != nil {
 		return nil, errors.Wrap(err, "error when marshalling proof")
 	}
 
 	return ser, nil
+}
+
+func trimNewline(input string) string {
+	if len(input) > 0 && input[len(input)-1] == '\n' {
+		return input[:len(input)-1]
+	}
+	if len(input) > 0 && input[len(input)-1] == '\r' {
+		return input[:len(input)-1]
+	}
+	return input
 }
